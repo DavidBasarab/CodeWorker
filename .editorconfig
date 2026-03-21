@@ -42,7 +42,7 @@ csharp_style_expression_bodied_local_functions = false:warning
 csharp_prefer_braces = true:warning
 
 # ─── Namespace style ─────────────────────────────────────────────────────────
-csharp_style_namespace_declarations = block_scoped:warning
+csharp_style_namespace_declarations = file_scoped:warning
 
 # ─── Using directives ────────────────────────────────────────────────────────
 dotnet_sort_system_directives_first = true
