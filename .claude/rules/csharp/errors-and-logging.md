@@ -5,7 +5,7 @@
 - Never throw an exception for a predictable outcome (validation failure, value out of range, known bad state).
 - For known failure modes, return a value — an enum is preferred.
 - Let exceptions bubble to the boundary where they can be meaningfully handled.
-- Do not catch and swallow exceptions silently.
+- Do not catch and swallow exceptions silently. The one exception: if a failure is genuinely non-actionable (e.g. a socket error on disconnect, a reflection comparison on an incompatible type), an empty catch with a `// ignored` comment is acceptable. This must be rare and deliberate — never use it to hide logic errors.
 
 ```csharp
 // Preferred for known failures:
