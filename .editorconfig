@@ -1,0 +1,114 @@
+root = true
+
+[*]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+end_of_line = crlf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.cs]
+
+# ─── Var usage (IDE0007 / IDE0008) ───────────────────────────────────────────
+csharp_style_var_for_built_in_types = true:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = true:warning
+
+# ─── Readonly fields (IDE0044) ────────────────────────────────────────────────
+dotnet_style_readonly_field = true:warning
+
+# ─── Remove unused usings (IDE0005) ──────────────────────────────────────────
+dotnet_diagnostic.IDE0005.severity = warning
+
+# ─── Remove redundant code ───────────────────────────────────────────────────
+dotnet_diagnostic.IDE0001.severity = warning
+dotnet_diagnostic.IDE0002.severity = warning
+dotnet_diagnostic.IDE0004.severity = warning
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
+
+# ─── Expression-bodied members — banned ──────────────────────────────────────
+csharp_style_expression_bodied_methods = false:warning
+csharp_style_expression_bodied_constructors = false:warning
+csharp_style_expression_bodied_operators = false:warning
+csharp_style_expression_bodied_properties = false:warning
+csharp_style_expression_bodied_indexers = false:warning
+csharp_style_expression_bodied_accessors = false:warning
+csharp_style_expression_bodied_local_functions = false:warning
+
+# ─── Braces ───────────────────────────────────────────────────────────────────
+csharp_prefer_braces = true:warning
+
+# ─── Namespace style ─────────────────────────────────────────────────────────
+csharp_style_namespace_declarations = block_scoped:warning
+
+# ─── Using directives ────────────────────────────────────────────────────────
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# ─── this. qualification — never ─────────────────────────────────────────────
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# ─── String interpolation over concatenation ─────────────────────────────────
+dotnet_diagnostic.IDE0071.severity = warning
+
+# ─── Naming styles ───────────────────────────────────────────────────────────
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+dotnet_naming_style.interface_style.required_prefix = I
+dotnet_naming_style.interface_style.capitalization = pascal_case
+
+# Types and namespaces — PascalCase
+dotnet_naming_rule.types_and_namespaces_should_be_pascal_case.severity = warning
+dotnet_naming_rule.types_and_namespaces_should_be_pascal_case.symbols = types_and_namespaces
+dotnet_naming_rule.types_and_namespaces_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.types_and_namespaces.applicable_kinds = namespace, class, enum, delegate
+dotnet_naming_symbols.types_and_namespaces.applicable_accessibilities = *
+
+# Interfaces — IPascalCase
+dotnet_naming_rule.interfaces_should_be_prefixed_with_I.severity = warning
+dotnet_naming_rule.interfaces_should_be_prefixed_with_I.symbols = interfaces
+dotnet_naming_rule.interfaces_should_be_prefixed_with_I.style = interface_style
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = *
+
+# Methods and local functions — PascalCase
+dotnet_naming_rule.methods_should_be_pascal_case.severity = warning
+dotnet_naming_rule.methods_should_be_pascal_case.symbols = methods
+dotnet_naming_rule.methods_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.methods.applicable_kinds = method, local_function
+dotnet_naming_symbols.methods.applicable_accessibilities = *
+
+# Properties and events — PascalCase
+dotnet_naming_rule.properties_should_be_pascal_case.severity = warning
+dotnet_naming_rule.properties_should_be_pascal_case.symbols = properties
+dotnet_naming_rule.properties_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.properties.applicable_kinds = property, event
+dotnet_naming_symbols.properties.applicable_accessibilities = *
+
+# Constants — PascalCase
+dotnet_naming_rule.constants_should_be_pascal_case.severity = warning
+dotnet_naming_rule.constants_should_be_pascal_case.symbols = constants
+dotnet_naming_rule.constants_should_be_pascal_case.style = pascal_case_style
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_symbols.constants.applicable_accessibilities = *
+
+# Private fields — camelCase, no underscore
+dotnet_naming_rule.private_fields_should_be_camel_case.severity = warning
+dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case.style = camel_case_style
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+# Parameters and locals — camelCase
+dotnet_naming_rule.parameters_should_be_camel_case.severity = warning
+dotnet_naming_rule.parameters_should_be_camel_case.symbols = parameters_and_locals
+dotnet_naming_rule.parameters_should_be_camel_case.style = camel_case_style
+dotnet_naming_symbols.parameters_and_locals.applicable_kinds = parameter, local
+dotnet_naming_symbols.parameters_and_locals.applicable_accessibilities = *
