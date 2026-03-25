@@ -12,7 +12,9 @@
 		<NoWarn>$(NoWarn);NETSDK1206</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="FakeItEasy" Version="*" />
 		<PackageReference Include="FatCat.Fakes" Version="*" />
+		<PackageReference Include="FluentAssertions" Version="*" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
 		<PackageReference Include="xunit" Version="2.9.3" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">

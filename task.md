@@ -1,17 +1,16 @@
 # Task
 
-Making the console application run with basic setup
+<!-- One-sentence description of what this task accomplishes -->
 
 ## Feature Context
 
-Making code worker run as a console application using the toolkit as a model.
+This will kick off child exe processes and monitor until the application exits.  THis will specifically run claude commands.
 
 ## Tasks
 
-- [ ] Based on the consoleRunning.md from the Toolkit set up the `Program.cs` to run
-- [ ] Enable logging with that will log to a `Logs` folder on each run.
-- [ ] Run the program with a basic logging statement of "Welcome to Code Worker" runs to both the log file and the console.
-- [ ] Iterate as needed to ensure it works.  If you cannot get it working after 5 attempts do let me know so I can look at it.
+- [ ] <!-- Specific, actionable item -->
+- [ ] <!-- Specific, actionable item -->
+- [ ] <!-- Specific, actionable item -->
 
 ## Required Steps
 
@@ -25,7 +24,6 @@ Making code worker run as a console application using the toolkit as a model.
 - [ ] Tests written before implementation (TDD)
 - [ ] All tests pass (`dotnet test`)
 - [ ] `dotnet format` run on all modified files
-- [ ] always end with a `dotnet build` to ensure CSharpier will run
 - [ ] No compiler warnings introduced
 - [ ] Namespaces match folder paths exactly
 - [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
@@ -33,11 +31,10 @@ Making code worker run as a console application using the toolkit as a model.
 
 ## References
 
-- C:\Code\FatCat.Toolkit\src\consoleRunning.md
+- <!-- Related issue, PR, or ticket -->
+- <!-- Relevant existing classes or files Claude should read first -->
 
 ## Notes
 
-- Logs should always be added too and not deleted unless manually done by a user.
-- Logs should include the date time stamp of local time when the run was done.
-- Unit tests are not required for basic infrastructure set up
+- <!-- Constraints, decisions, known edge cases -->
 
