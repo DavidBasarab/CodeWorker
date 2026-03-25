@@ -20,13 +20,13 @@
 1. <!-- Step 1 -->
 2. <!-- Step 2 -->
 3. <!-- Step 3 -->
-4. Run `jb cleanupcode` on all created/modified `.cs` files using the `Toolkit_Default` profile
+4. Run `dotnet format` on all created/modified `.cs` files
 
 ## Verification
 
 - [ ] Tests written before implementation (TDD)
 - [ ] All tests pass (`dotnet test`)
-- [ ] `jb cleanupcode` run on all modified files
+- [ ] `dotnet format` run on all modified files
 - [ ] No compiler warnings introduced
 - [ ] Namespaces match folder paths exactly
 - [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
@@ -40,3 +40,4 @@
 ## Notes
 
 - <!-- Constraints, decisions, known edge cases -->
+
