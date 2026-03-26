@@ -1,0 +1,63 @@
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using Serilog;
+
+namespace FatCat.CodeWorker.Process;
+
+[ExcludeFromCodeCoverage(
+	Justification = "Direct wrapper over System.Diagnostics.Process — no business logic, tested via IRunProcess fakes in consuming classes."
+)]
+public class RunProcess(ILogger logger) : IRunProcess
+{
+	public async Task<ProcessResult> Run(ProcessSettings settings)
+	{
+		var result = new ProcessResult();
+
+		var startInfo = new ProcessStartInfo
+		{
+			FileName = settings.FileName,
+			Arguments = settings.Arguments,
+			WorkingDirectory = settings.WorkingDirectory,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			UseShellExecute = false,
+			CreateNoWindow = true,
+		};
+
+		using var process = new System.Diagnostics.Process();
+
+		process.StartInfo = startInfo;
+
+		process.OutputDataReceived += (sender, args) =>
+		{
+			if (args.Data == null)
+			{
+				return;
+			}
+
+			logger.Information("[stdout] {OutputLine}", args.Data);
+			result.OutputLines.Add(args.Data);
+		};
+
+		process.ErrorDataReceived += (sender, args) =>
+		{
+			if (args.Data == null)
+			{
+				return;
+			}
+
+			logger.Warning("[stderr] {ErrorLine}", args.Data);
+			result.ErrorLines.Add(args.Data);
+		};
+
+		process.Start();
+		process.BeginOutputReadLine();
+		process.BeginErrorReadLine();
+
+		await process.WaitForExitAsync();
+
+		result.ExitCode = process.ExitCode;
+
+		return result;
+	}
+}
