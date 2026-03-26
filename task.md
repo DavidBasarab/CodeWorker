@@ -4,7 +4,7 @@
 
 ## Feature Context
 
-This will kick off child exe processes and monitor until the application exits.  THis will specifically run claude commands.
+Set Up A repository to in order to be worked by this tool.  There 
 
 ## Tasks
 
