@@ -1,9 +1,9 @@
-using FatCat.CodeWorker.Claude;
+using FatCat.CodeWorker.Commands;
 using Serilog;
 
 namespace FatCat.CodeWorker;
 
-public class CodeWorkerApplication(IRunClaude runClaude, ILogger logger)
+public class CodeWorkerApplication(IResolveCommand resolveCommand, ILogger logger)
 {
 	public async Task DoWork(string[] args)
 	{
@@ -11,13 +11,13 @@ public class CodeWorkerApplication(IRunClaude runClaude, ILogger logger)
 
 		if (args.Length == 0)
 		{
-			logger.Error("No markdown file path provided. Usage: CodeWorker <path-to-markdown-file>");
+			logger.Error("No arguments provided. Usage: CodeWorker <command> [options]");
 
 			return;
 		}
 
-		var markdownFilePath = args[0];
+		var command = resolveCommand.Resolve(args);
 
-		await runClaude.Run(markdownFilePath);
+		await command.Execute(args);
 	}
 }
