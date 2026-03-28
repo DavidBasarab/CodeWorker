@@ -106,34 +106,89 @@ Write Task 2 with a revised prompt, place it back in `tasks/todo/`, and let the 
 
 ## Configuration
 
-The application reads a config file (`appsettings.json`) at startup:
+The application reads a config file (`appsettings.json`) at startup.  These are global settings that can be overriden at the repository level.
 
 ```json
 {
   "Repositories": [
     {
       "Path": "C:\\Projects\\my-api",
-      "Enabled": true
+      "Enabled": true,
+      "SettingsPath" : "C:\\Projects\\my-api\\tasks\\settings.json"
     },
     {
       "Path": "C:\\Projects\\my-frontend",
+      "SettingsPath" : "C:\\Projects\\my-api\\tasks\\settings.json",
       "Enabled": true
     }
   ],
+  
   "Git": {
-    "CommitAuthor": "Claude Runner",
-    "CommitEmail": "claude-runner@local",
-    "PushAfterEachTask": false,
-    "PushAfterAllTasks": true
+    "CommitAfterEachTask": true,
+    "PushAfterEachTask": true,
+    "PullBeforeEachTask": true,
+    "CommitMessagePrefix": "🤖",
+    "Branch": ""
   },
+
   "Claude": {
+    "Model": "claude-sonnet-4-6",
     "MaxTurns": 10,
-    "SkipPermissions": true
-  }
+    "SkipPermissions": true,
+    "OutputFormat": "json",
+    "SystemPromptFile": "",
+    "AllowedTools": [],
+    "TimeoutMinutes": 30
+  },
 }
 ```
 
-Multiple repositories are supported. Each is processed sequentially in the order listed.
+Multiple repositories are supported. Each is processed sequentially in the order listed.  Will not move on to the next repository in all the tasks are complete in the previous repository.
+
+## Repository Configuration
+
+These basic settings will be added to `tasks\settings.json` when setting up the repository.  This will override global settings in order to support being more remote in the development.
+
+```json
+{
+  "Enabled": true,
+  "LogResults": true,
+
+  "Git": {
+    "CommitAfterEachTask": true,
+    "PushAfterEachTask": true,
+    "PullBeforeEachTask": true,
+    "CommitMessagePrefix": "🤖",
+    "Branch": ""
+  },
+
+  "Claude": {
+    "Model": "claude-sonnet-4-6",
+    "MaxTurns": 10,
+    "SkipPermissions": true,
+    "OutputFormat": "json",
+    "SystemPromptFile": "",
+    "AllowedTools": [],
+    "TimeoutMinutes": 30
+  },
+
+  "Tasks": {
+    "TodoFolder": "tasks/todo",
+    "DoneFolder": "tasks/done",
+    "ReferenceFolder" : "tasks/reference",
+    "PendingFolder" : "tasks/pending",
+    "BlockedFolder": "tasks/blocked",
+    "StopOnBlocked": true,
+    "RunPlanningPhase": false
+  },
+
+  "Notifications": {
+    "OnTaskComplete": false,
+    "OnTaskFailed": true,
+    "OnAllTasksComplete": true
+  }
+}
+```
 
 ---
 

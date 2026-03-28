@@ -15,6 +15,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Commands\Setup\TasksReadme.md" />
+		<EmbeddedResource Include="Commands\Setup\defaultSettings.json" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="CSharpier.MsBuild" Version="1.2.6">

@@ -1,23 +1,23 @@
 # Task
 
-<!-- One-sentence description of what this task accomplishes -->
+Add settings file and more settings.
 
 ## Feature Context
 
-Set Up A repository to in order to be worked by this tool.  There 
+I want to be able to configure the application on what repositories to read.  This will be the settings filed defined in `Repository Configuration` of the ReadMe
 
 ## Tasks
 
-- [ ] <!-- Specific, actionable item -->
-- [ ] <!-- Specific, actionable item -->
-- [ ] <!-- Specific, actionable item -->
+- [ ] Create `defaultSettings.json` in C:\Code\CodeWorker\CodeWorker\Commands\Setup
+- [ ] The defaultSettings.json is found in the `README.md`
+- [ ] Embeed `defaultSettings.json` on setup write the `settings.json` file.
+- [ ] On SetUp write the `settings.json` file.
+- [ ] Add `pending` folder on setup
+- [ ] Add `blocked` folder on setup
 
 ## Required Steps
 
-1. <!-- Step 1 -->
-2. <!-- Step 2 -->
-3. <!-- Step 3 -->
-4. Run `dotnet format` on all created/modified `.cs` files
+1. Run `dotnet format` on all created/modified `.cs` files
 
 ## Verification
 
@@ -31,10 +31,8 @@ Set Up A repository to in order to be worked by this tool.  There
 
 ## References
 
-- <!-- Related issue, PR, or ticket -->
-- <!-- Relevant existing classes or files Claude should read first -->
+- Ready the ReadME.md for an overview of the application
+- C:\Code\CodeWorker\CodeWorker\Commands\Setup
 
 ## Notes
-
-- <!-- Constraints, decisions, known edge cases -->
 

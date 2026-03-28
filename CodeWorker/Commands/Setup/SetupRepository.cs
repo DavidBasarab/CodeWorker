@@ -11,12 +11,12 @@ public interface ISetupRepository
 
 public class SetupRepository(IFileSystemTools fileSystemTools, ILogger logger) : ISetupRepository
 {
-	private static string ReadReadmeFromEmbeddedResource()
+	private static string ReadEmbeddedResource(string resourceName)
 	{
 		var assembly = Assembly.GetExecutingAssembly();
-		var resourceName = "FatCat.CodeWorker.Commands.Setup.TasksReadme.md";
+		var fullResourceName = $"FatCat.CodeWorker.Commands.Setup.{resourceName}";
 
-		using var stream = assembly.GetManifestResourceStream(resourceName);
+		using var stream = assembly.GetManifestResourceStream(fullResourceName);
 		using var reader = new StreamReader(stream);
 
 		return reader.ReadToEnd();
@@ -28,17 +28,24 @@ public class SetupRepository(IFileSystemTools fileSystemTools, ILogger logger) :
 		var todoPath = Path.Combine(tasksPath, "todo");
 		var donePath = Path.Combine(tasksPath, "done");
 		var blockedPath = Path.Combine(tasksPath, "blocked");
+		var pendingPath = Path.Combine(tasksPath, "pending");
 
 		logger.Information("Setting up task folders at {RepositoryPath}", repositoryPath);
 
 		fileSystemTools.EnsureDirectory(todoPath);
 		fileSystemTools.EnsureDirectory(donePath);
 		fileSystemTools.EnsureDirectory(blockedPath);
+		fileSystemTools.EnsureDirectory(pendingPath);
 
 		await fileSystemTools.WriteAllText(Path.Combine(todoPath, ".gitkeep"), string.Empty);
 		await fileSystemTools.WriteAllText(Path.Combine(donePath, ".gitkeep"), string.Empty);
 		await fileSystemTools.WriteAllText(Path.Combine(blockedPath, ".gitkeep"), string.Empty);
-		await fileSystemTools.WriteAllText(Path.Combine(tasksPath, "README.md"), ReadReadmeFromEmbeddedResource());
+		await fileSystemTools.WriteAllText(Path.Combine(pendingPath, ".gitkeep"), string.Empty);
+		await fileSystemTools.WriteAllText(Path.Combine(tasksPath, "README.md"), ReadEmbeddedResource("TasksReadme.md"));
+		await fileSystemTools.WriteAllText(
+			Path.Combine(tasksPath, "settings.json"),
+			ReadEmbeddedResource("defaultSettings.json")
+		);
 
 		logger.Information("Repository setup complete at {RepositoryPath}", repositoryPath);
 	}

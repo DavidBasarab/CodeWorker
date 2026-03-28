@@ -91,4 +91,46 @@ public class SetupRepositoryTests
 
 		capturedContent.Should().Contain("01-");
 	}
+
+	[Fact]
+	public async Task CreateThePendingDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\pending")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteGitKeepToPendingDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\pending\.gitkeep", string.Empty))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteSettingsJsonToTasksDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\settings.json", A<string>.Ignored))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task SettingsJsonContainsExpectedStructure()
+	{
+		var capturedContent = string.Empty;
+
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("settings.json"), A<string>.Ignored))
+			.Invokes((string path, string text) => capturedContent = text);
+
+		await setupRepository.Setup(repositoryPath);
+
+		capturedContent.Should().Contain("\"Enabled\"");
+		capturedContent.Should().Contain("\"Claude\"");
+		capturedContent.Should().Contain("\"Tasks\"");
+		capturedContent.Should().Contain("\"Notifications\"");
+	}
 }
