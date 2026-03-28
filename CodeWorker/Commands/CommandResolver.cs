@@ -12,6 +12,11 @@ public class CommandResolver(IRunSetupCommand setupCommand, IRunTaskCommand runT
 {
 	public ICommand Resolve(string[] args)
 	{
+		if (args.Length == 0)
+		{
+			return runTaskCommand;
+		}
+
 		var commandName = args[0];
 
 		if (string.Equals(commandName, "setup", StringComparison.OrdinalIgnoreCase))

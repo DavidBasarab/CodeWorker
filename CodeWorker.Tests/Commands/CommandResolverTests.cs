@@ -43,9 +43,9 @@ public class CommandResolverTests
 	}
 
 	[Fact]
-	public void ReturnRunTaskCommandForUnknownCommand()
+	public void ReturnRunTaskCommandWhenNoArgumentsProvided()
 	{
-		var result = resolver.Resolve(new[] { @"C:\Tasks\my-task.md" });
+		var result = resolver.Resolve(Array.Empty<string>());
 
 		result.Should().BeSameAs(runTaskCommand);
 	}

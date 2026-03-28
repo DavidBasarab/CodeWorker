@@ -9,13 +9,6 @@ public class CodeWorkerApplication(IResolveCommand resolveCommand, ILogger logge
 	{
 		logger.Information("Welcome to Code Worker");
 
-		if (args.Length == 0)
-		{
-			logger.Error("No arguments provided. Usage: CodeWorker <command> [options]");
-
-			return;
-		}
-
 		var command = resolveCommand.Resolve(args);
 
 		await command.Execute(args);

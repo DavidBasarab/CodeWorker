@@ -1,11 +1,16 @@
 # Task
 
-Add the appsettings described in the `Configuration` settings of the `README.md`
+<!-- One-sentence description of what this task accomplishes -->
 
 ## Feature Context
 
-Have the application run 
+Going to run the application tasks.  This will be from the appsettings.json.  The flow is going to be read the repositories from the appsettings.json.  Pull a task from the `todo` folder.  Move it into the `pending` folder.  Have claude do the work.  Once claude is done commit the change.  Move the task from `pending` to `done`. 
 
+## Tasks
+
+- [ ] <!-- Specific, actionable item -->
+- [ ] <!-- Specific, actionable item -->
+- [ ] <!-- Specific, actionable item -->
 
 ## Required Steps
 
@@ -25,7 +30,7 @@ Have the application run
 
 ## References
 
-- Ready the ReadME.md for an overview of the application
+- Ready the `README.md` for an overview of the application
 - <!-- Related issue, PR, or ticket -->
 - <!-- Relevant existing classes or files Claude should read first -->
 

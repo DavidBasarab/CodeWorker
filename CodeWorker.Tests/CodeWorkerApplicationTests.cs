@@ -50,19 +50,12 @@ public class CodeWorkerApplicationTests
 	}
 
 	[Fact]
-	public async Task LogErrorWhenNoArgumentsProvided()
+	public async Task ResolveRunCommandWhenNoArgumentsProvided()
 	{
-		await application.DoWork(Array.Empty<string>());
+		var args = Array.Empty<string>();
 
-		A.CallTo(() => logger.Error("No arguments provided. Usage: CodeWorker <command> [options]"))
-			.MustHaveHappenedOnceExactly();
-	}
+		await application.DoWork(args);
 
-	[Fact]
-	public async Task NotResolveCommandWhenNoArgumentsProvided()
-	{
-		await application.DoWork(Array.Empty<string>());
-
-		A.CallTo(() => resolveCommand.Resolve(A<string[]>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => resolveCommand.Resolve(args)).MustHaveHappenedOnceExactly();
 	}
 }
