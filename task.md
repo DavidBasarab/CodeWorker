@@ -8,9 +8,17 @@ Going to run the application tasks.  This will be from the appsettings.json.  Th
 
 ## Tasks
 
-- [ ] <!-- Specific, actionable item -->
-- [ ] <!-- Specific, actionable item -->
-- [ ] <!-- Specific, actionable item -->
+- [ ] Read the repository from settings.
+- [ ] Read the repository settings.
+- [ ] If there as `todo` task take it for work
+- [ ] Pull them in order of name like `11_MyTask` and them `14_ThisTask` if there are not `Number_` assume alphabetical.  If there is only one then order does not matter.
+- [ ] When taking for work that means moving to `pending` folder
+- [ ] Log what task is starting by name of the task file
+- [ ] Have claude do the task
+- [ ] Wait for claude to finish
+- [ ] Log the result of the task to the a log file in the repository `CodeWorker.log`
+- [ ] Move the folder from `pending` to complete
+- [ ] Take the next task and loop until complete
 
 ## Required Steps
 
