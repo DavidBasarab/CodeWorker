@@ -4,7 +4,7 @@ Add the appsettings described in the `Configuration` settings of the `README.md`
 
 ## Feature Context
 
-Add CodeWork AppSettings to project.
+Have the application run 
 
 
 ## Required Steps
