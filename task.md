@@ -1,29 +1,23 @@
 # Task
 
-Add settings file and more settings.
+Add the appsettings described in the `Configuration` settings of the `README.md`
 
 ## Feature Context
 
-I want to be able to configure the application on what repositories to read.  This will be the settings filed defined in `Repository Configuration` of the ReadMe
+Add CodeWork AppSettings to project.
 
-## Tasks
-
-- [ ] Create `defaultSettings.json` in C:\Code\CodeWorker\CodeWorker\Commands\Setup
-- [ ] The defaultSettings.json is found in the `README.md`
-- [ ] Embeed `defaultSettings.json` on setup write the `settings.json` file.
-- [ ] On SetUp write the `settings.json` file.
-- [ ] Add `pending` folder on setup
-- [ ] Add `blocked` folder on setup
 
 ## Required Steps
 
 1. Run `dotnet format` on all created/modified `.cs` files
+2. Run `dotnet build` to apply CSharpier changes
 
 ## Verification
 
 - [ ] Tests written before implementation (TDD)
 - [ ] All tests pass (`dotnet test`)
 - [ ] `dotnet format` run on all modified files
+- [ ] `dotnet build` to apply CSharpier changes
 - [ ] No compiler warnings introduced
 - [ ] Namespaces match folder paths exactly
 - [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
@@ -32,7 +26,10 @@ I want to be able to configure the application on what repositories to read.  Th
 ## References
 
 - Ready the ReadME.md for an overview of the application
-- C:\Code\CodeWorker\CodeWorker\Commands\Setup
+- <!-- Related issue, PR, or ticket -->
+- <!-- Relevant existing classes or files Claude should read first -->
 
 ## Notes
+
+- <!-- Constraints, decisions, known edge cases -->
 
