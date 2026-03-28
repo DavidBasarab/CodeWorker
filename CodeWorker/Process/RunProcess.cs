@@ -4,6 +4,11 @@ using Serilog;
 
 namespace FatCat.CodeWorker.Process;
 
+public interface IRunProcess
+{
+	Task<ProcessResult> Run(ProcessSettings settings);
+}
+
 [ExcludeFromCodeCoverage(
 	Justification = "Direct wrapper over System.Diagnostics.Process — no business logic, tested via IRunProcess fakes in consuming classes."
 )]

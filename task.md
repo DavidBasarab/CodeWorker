@@ -4,7 +4,7 @@
 
 ## Feature Context
 
-This will kick off child exe processes and monitor until the application exits.  THis will specifically run claude commands.
+Going to run the application tasks.  This will be from the appsettings.json.  The flow is going to be read the repositories from the appsettings.json.  Pull a task from the `todo` folder.  Move it into the `pending` folder.  Have claude do the work.  Once claude is done commit the change.  Move the task from `pending` to `done`. 
 
 ## Tasks
 
@@ -14,16 +14,15 @@ This will kick off child exe processes and monitor until the application exits. 
 
 ## Required Steps
 
-1. <!-- Step 1 -->
-2. <!-- Step 2 -->
-3. <!-- Step 3 -->
-4. Run `dotnet format` on all created/modified `.cs` files
+1. Run `dotnet format` on all created/modified `.cs` files
+2. Run `dotnet build` to apply CSharpier changes
 
 ## Verification
 
 - [ ] Tests written before implementation (TDD)
 - [ ] All tests pass (`dotnet test`)
 - [ ] `dotnet format` run on all modified files
+- [ ] `dotnet build` to apply CSharpier changes
 - [ ] No compiler warnings introduced
 - [ ] Namespaces match folder paths exactly
 - [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
@@ -31,6 +30,7 @@ This will kick off child exe processes and monitor until the application exits. 
 
 ## References
 
+- Ready the `README.md` for an overview of the application
 - <!-- Related issue, PR, or ticket -->
 - <!-- Relevant existing classes or files Claude should read first -->
 

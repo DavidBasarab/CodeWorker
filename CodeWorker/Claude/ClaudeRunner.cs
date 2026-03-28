@@ -3,6 +3,11 @@ using Serilog;
 
 namespace FatCat.CodeWorker.Claude;
 
+public interface IRunClaude
+{
+	Task<ProcessResult> Run(string markdownFilePath);
+}
+
 public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 {
 	public async Task<ProcessResult> Run(string markdownFilePath)
