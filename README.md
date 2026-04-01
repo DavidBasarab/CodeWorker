@@ -1,33 +1,145 @@
 # Claude Overnight Task Runner
 
-## Vision
-
-A lightweight Windows-based automation system that lets a developer queue up coding tasks during the day and have Claude Code execute them overnight — unattended. Each morning, the developer reviews clean, committed changes and queues the next batch.
-
-The goal is to act as a **personal overnight engineering assistant**: you define the work, Claude does it, Git preserves the history, and you stay in control of what lands.
+> Purpose: A Windows-based overnight automation runner that processes queued coding tasks in one or more local repositories using Claude Code, commits each completed task as a separate Git commit, and prepares the results for human review the next morning.
 
 ---
 
-## How It Works
+## Overview
 
-A Windows Scheduled Task fires at a configured time (e.g. 2:00 AM). It runs a .NET console application that:
+Claude Overnight Task Runner is a personal developer automation tool for executing coding tasks unattended overnight.
 
-1. Reads a configuration file listing one or more local repository paths to process
-2. For each repository, performs a `git pull` to get the latest code
-3. Looks in the `tasks/todo/` folder at the root of the repo for task files
-4. Processes each task file **in order** (alphabetical/numbered filename ordering)
-5. Shells out to `claude -p` with the contents of each task file
-6. After each task completes, commits the changes with a descriptive message
-7. Moves the completed task file to `tasks/done/`
-8. Pushes the commits so results are available for review in the morning
+The workflow is:
+
+1. During the day, the developer writes task files and places them in a repository queue.
+2. Overnight, a scheduled Windows task launches the runner.
+3. The runner processes queued tasks in deterministic order.
+4. Claude Code executes each task against the repository.
+5. The runner commits the result of each completed task separately.
+6. Completed work is pushed and ready for review in the morning.
+
+This project is intentionally designed to keep the human in control:
+
+- The AI performs implementation work
+- Git preserves history and reversibility
+- The developer reviews all changes before merging
+
+---
+
+## Core Goals
+
+### Primary Goal
+Provide a reliable overnight coding assistant that can execute clearly defined repository tasks without supervision.
+
+### Secondary Goals
+- Preserve a clean Git history
+- Support multiple repositories
+- Make rollback simple
+- Fail visibly instead of silently
+- Keep task execution deterministic and auditable
+- Make task instructions easy for AI systems to parse and follow
+
+### Non-Goals
+- Automatic merge to main
+- Autonomous product decision-making
+- Cross-task memory beyond repository files and current task context
+- Replacing human review
+- Handling vague or underspecified tasks without explicit assumptions
+
+---
+
+## Key Design Principles
+
+### One task, one commit
+Each successfully completed task should produce exactly one Git commit.
+
+This is critical because it:
+- makes review easier
+- makes rollback predictable
+- keeps intent aligned with the resulting code change
+
+Never combine multiple tasks into one commit.
+
+### Tasks must be self-contained
+Each task file should include the information needed to complete the task safely.
+
+Claude should not rely on memory from previous tasks. Every task should be executable independently using repository state plus repository instructions.
+
+### Fail visibly
+If a task cannot be completed safely, the system must record that clearly.
+
+Preferred behavior:
+- do not produce low-confidence changes silently
+- create a blocked explanation
+- move the task to `tasks/blocked/`
+- continue or stop based on configuration
+
+### Human review is required
+The runner does not replace engineering judgment.
+
+The developer must review all changes before merge or release.
+
+### Prompts are versioned assets
+Task files are part of the engineering process. They should live in source control and serve as:
+- execution instructions
+- historical record of intent
+- documentation of why a change was requested
+
+---
+
+## Definitions
+
+### Runner
+The .NET console application that orchestrates overnight task execution.
+
+### Task File
+A Markdown file in `tasks/todo/` containing a single self-contained implementation request.
+
+### Completed Task
+A task that finished successfully, produced acceptable output, and was moved to `tasks/done/`.
+
+### Blocked Task
+A task that could not be completed safely or confidently and was moved to `tasks/blocked/` with an explanation.
+
+### Pending Task
+A task deferred for later processing, usually because it depends on another task, condition, or manual input.
+
+### Repository Settings
+Overrides stored in `tasks/settings.json` for repository-specific behavior.
+
+### Reference Files
+Supporting documents stored in `tasks/reference/` that may be included in task context.
+
+---
+
+## High-Level Workflow
+
+A Windows Scheduled Task launches a .NET console application at a configured time, for example 2:00 AM.
+
+For each configured repository, the runner performs the following steps:
+
+1. Load global configuration
+2. Load repository-level configuration overrides if present
+3. Validate repository state and required folders
+4. Pull the latest Git changes
+5. Discover task files in `tasks/todo/`
+6. Sort task files by filename in ascending order
+7. Process each task one at a time
+8. Execute Claude Code using the task file contents
+9. Validate task completion outcome
+10. Commit code changes if configured
+11. Move the task file to the correct destination folder
+12. Push changes if configured
+13. Continue until all tasks are processed or stop conditions are met
+
+Repository processing is sequential. The runner should not process multiple repositories in parallel unless that capability is intentionally added later.
 
 ---
 
 ## Repository Structure
 
-Each monitored repository follows this convention:
+Each monitored repository should follow this convention:
 
-```
+```text
 /your-project
   /tasks
     /todo
@@ -35,78 +147,258 @@ Each monitored repository follows this convention:
       02-add-unit-tests-auth.md
       03-update-api-docs.md
     /done
-      00-initial-setup.md        ← completed tasks move here
+      00-initial-setup.md
+    /blocked
+    /pending
+    /reference
+    settings.json
   /src
     ...
-  CLAUDE.md                      ← project-level instructions for Claude
+  CLAUDE.md
 ```
 
-Task files are plain Markdown. The filename prefix controls execution order. Each file contains a self-contained prompt describing exactly what Claude should do.
+### Folder Meanings
+
+- `tasks/todo/` — queue of tasks waiting to run
+- `tasks/done/` — completed task files
+- `tasks/blocked/` — tasks that could not be completed safely
+- `tasks/pending/` — tasks intentionally deferred
+- `tasks/reference/` — supporting files for AI context, examples, architecture notes, constraints, or standards
+- `CLAUDE.md` — repository-level AI instruction file
+- `tasks/settings.json` — repository-level overrides for runner behavior
 
 ---
 
-## Task File Format
+## Execution Rules
+
+The runner must follow these rules:
+
+1. Process repositories in configured order
+2. Within each repository, process task files in filename order
+3. Execute only one task at a time per repository
+4. Treat each task as isolated except for repository state and repository instructions
+5. Do not skip numbered ordering unless explicitly configured
+6. Do not continue a partially completed task silently
+7. Record failures explicitly
+8. Do not auto-merge branches
+9. Do not rewrite Git history unless explicitly directed by a human
+10. Prefer deterministic, reviewable changes over clever or risky changes
+
+---
+
+## Task File Requirements
+
+Each task file should represent exactly one logical unit of work.
+
+### Good Task Characteristics
+- specific
+- bounded
+- testable
+- self-contained
+- references exact files, components, or patterns
+- includes success criteria
+- includes constraints
+
+### Poor Task Characteristics
+- vague
+- open-ended
+- product strategy questions
+- multi-feature epics
+- requests requiring unresolved human decisions
+- tasks with no clear completion criteria
+
+### Recommended Task Template
+
+```markdown
+# Task Title
+
+## Objective
+State exactly what should be changed.
+
+## Scope
+List the files, modules, layers, or components that are in scope.
+
+## Requirements
+- Requirement 1
+- Requirement 2
+- Requirement 3
+
+## Constraints
+- Do not change public APIs unless explicitly stated
+- Preserve existing behavior unless explicitly stated
+- Follow patterns already used in the repository
+
+## Acceptance Criteria
+- All relevant tests pass
+- Build succeeds
+- No unrelated files are modified
+- Requested behavior is implemented
+
+## Notes
+Optional implementation hints, references, or examples.
+```
+
+### Example Task
 
 ```markdown
 # Refactor Auth Service
 
-Refactor the authentication service in `/src/services/AuthService.cs` to use
-the middleware pattern. Specifically:
+## Objective
+Refactor the authentication flow to use middleware-based token validation.
 
+## Scope
+- `/src/services/AuthService.cs`
+- `/src/middleware/`
+- `/src/controllers/UserController.cs`
+
+## Requirements
 - Extract token validation into `AuthMiddleware.cs`
-- Remove duplicate validation logic in `UserController.cs`
-- Ensure all existing unit tests still pass
+- Remove duplicated validation logic from `UserController.cs`
+- Preserve existing external behavior
 - Follow the patterns established in `PaymentMiddleware.cs`
 
-Do not change the public interface of `AuthService`.
+## Constraints
+- Do not change the public interface of `AuthService`
+- Do not modify unrelated controllers
+
+## Acceptance Criteria
+- Existing tests still pass
+- Build succeeds
+- Authentication behavior remains unchanged from the caller perspective
 ```
+
+---
+
+## AI Context Contract
+
+This section exists specifically to help AI systems parse the project consistently.
+
+### Assumptions About the AI Agent
+The AI agent:
+- has access to the local repository
+- can read repository files
+- can read `CLAUDE.md`
+- can read the current task file
+- may optionally read files from `tasks/reference/`
+- does not retain reliable memory between tasks
+- should make reasonable implementation decisions only within the boundaries of the task and repository conventions
+
+### Required AI Behavior
+The AI should:
+- prioritize correctness over speed
+- stay within task scope
+- avoid unrelated refactors
+- preserve existing conventions
+- run or consider tests when appropriate
+- document blockers clearly
+- avoid asking clarifying questions during unattended execution
+- make minimal necessary assumptions
+- keep changes small and reviewable
+
+### Prohibited AI Behavior
+The AI should not:
+- perform broad opportunistic refactors
+- change unrelated files
+- alter public APIs unless requested
+- invent product requirements
+- silently ignore blockers
+- leave the repository in an ambiguous state
+
+---
+
+## Suggested Task State Model
+
+Possible states:
+- `Todo`
+- `Running`
+- `Done`
+- `Blocked`
+- `Pending`
+- `Failed`
+
+Suggested transitions:
+
+```text
+Todo -> Running -> Done
+Todo -> Running -> Blocked
+Todo -> Running -> Pending
+Todo -> Running -> Failed
+```
+
+Folder mapping:
+- `Todo` => `tasks/todo/`
+- `Done` => `tasks/done/`
+- `Blocked` => `tasks/blocked/`
+- `Pending` => `tasks/pending/`
 
 ---
 
 ## Git Commit Strategy
 
-Each task produces exactly **one commit**. This is intentional and critical to the rollback workflow.
+Each successful task produces exactly one commit.
 
-```
-commit a1b2c3  ←  01-refactor-auth-service    (Task 1)
-commit d4e5f6  ←  02-add-unit-tests-auth       (Task 2)
-commit g7h8i9  ←  03-update-api-docs           (Task 3)
+### Commit Principles
+- one commit per task
+- commit only after the task is complete
+- commit message should make the task intent obvious
+- commit should be reviewable on its own
+
+### Example Commit Sequence
+
+```text
+commit a1b2c3  ←  01-refactor-auth-service
+commit d4e5f6  ←  02-add-unit-tests-auth
+commit g7h8i9  ←  03-update-api-docs
 ```
 
-You review the diff for each commit independently the next morning. If you dislike a change, you have clean, predictable rollback options.
+### Recommended Commit Message Format
+
+```text
+🤖 01-refactor-auth-service
+```
+
+Optional richer format:
+
+```text
+🤖 Task 01: refactor auth service
+```
 
 ---
 
-## Rollback Scenarios
+## Rollback Strategy
+
+Rollback is intentionally simple because each task is isolated to one commit.
 
 ### Roll back everything from Task 2 onward
 
-Tasks 2 and 3 built on top of Task 1 — you want to discard all of it:
-
 ```bash
 git reset --hard a1b2c3
-# or, to keep history intact:
+```
+
+Or preserve history:
+
+```bash
 git revert d4e5f6 g7h8i9
 ```
 
-### Roll back only Task 2, keep Task 3
-
-Harder, because Task 3 may depend on Task 2's changes. Attempt:
+### Roll back only Task 2
 
 ```bash
-git revert d4e5f6   # reverts Task 2
-# Resolve any conflicts, then re-queue Task 2 with a revised prompt
+git revert d4e5f6
 ```
 
-### Cleanest approach for dependent tasks
+If later tasks depend on Task 2, conflicts may occur.
 
-Write Task 2 with a revised prompt, place it back in `tasks/todo/`, and let the runner re-execute it the following night. Tasks 3 and beyond pick up from the corrected base automatically.
+### Best practice for dependent corrections
+If Task 2 was wrong, revise the task prompt and re-queue it rather than manually patching a fragile chain of dependent commits.
 
 ---
 
-## Configuration
+## Global Configuration
 
-The application reads a config file (`appsettings.json`) at startup.  These are global settings that can be overriden at the repository level.
+The application reads `appsettings.json` at startup.
+
+Global settings apply by default and may be overridden by repository-level settings.
 
 ```json
 {
@@ -114,15 +406,14 @@ The application reads a config file (`appsettings.json`) at startup.  These are 
     {
       "Path": "C:\\Projects\\my-api",
       "Enabled": true,
-      "SettingsPath" : "C:\\Projects\\my-api\\tasks\\settings.json"
+      "SettingsPath": "C:\\Projects\\my-api\\tasks\\settings.json"
     },
     {
       "Path": "C:\\Projects\\my-frontend",
-      "SettingsPath" : "C:\\Projects\\my-api\\tasks\\settings.json",
-      "Enabled": true
+      "Enabled": true,
+      "SettingsPath": "C:\\Projects\\my-frontend\\tasks\\settings.json"
     }
   ],
-  
   "Git": {
     "CommitAfterEachTask": true,
     "PushAfterEachTask": true,
@@ -130,7 +421,6 @@ The application reads a config file (`appsettings.json`) at startup.  These are 
     "CommitMessagePrefix": "🤖",
     "Branch": ""
   },
-
   "Claude": {
     "Model": "claude-sonnet-4-6",
     "MaxTurns": 10,
@@ -139,21 +429,25 @@ The application reads a config file (`appsettings.json`) at startup.  These are 
     "SystemPromptFile": "",
     "AllowedTools": [],
     "TimeoutMinutes": 30
-  },
+  }
 }
 ```
 
-Multiple repositories are supported. Each is processed sequentially in the order listed.  Will not move on to the next repository in all the tasks are complete in the previous repository.
+Notes:
+- Repositories are processed in listed order
+- Repository-level settings override global settings
+- An empty `Branch` means use the currently checked out branch unless implementation defines otherwise
+
+---
 
 ## Repository Configuration
 
-These basic settings will be added to `tasks\settings.json` when setting up the repository.  This will override global settings in order to support being more remote in the development.
+Repository settings live at `tasks/settings.json`.
 
 ```json
 {
   "Enabled": true,
   "LogResults": true,
-
   "Git": {
     "CommitAfterEachTask": true,
     "PushAfterEachTask": true,
@@ -161,7 +455,6 @@ These basic settings will be added to `tasks\settings.json` when setting up the 
     "CommitMessagePrefix": "🤖",
     "Branch": ""
   },
-
   "Claude": {
     "Model": "claude-sonnet-4-6",
     "MaxTurns": 10,
@@ -171,17 +464,15 @@ These basic settings will be added to `tasks\settings.json` when setting up the 
     "AllowedTools": [],
     "TimeoutMinutes": 30
   },
-
   "Tasks": {
     "TodoFolder": "tasks/todo",
     "DoneFolder": "tasks/done",
-    "ReferenceFolder" : "tasks/reference",
-    "PendingFolder" : "tasks/pending",
+    "ReferenceFolder": "tasks/reference",
+    "PendingFolder": "tasks/pending",
     "BlockedFolder": "tasks/blocked",
     "StopOnBlocked": true,
     "RunPlanningPhase": false
   },
-
   "Notifications": {
     "OnTaskComplete": false,
     "OnTaskFailed": true,
@@ -189,6 +480,77 @@ These basic settings will be added to `tasks\settings.json` when setting up the 
   }
 }
 ```
+
+---
+
+## Failure and Blocker Handling
+
+The runner should distinguish between:
+- execution failure
+- blocked task
+- incomplete task
+- infrastructure failure
+
+### Examples of Blocked Conditions
+- missing dependency
+- missing credentials
+- contradictory task instructions
+- required file does not exist
+- tests reveal a larger issue outside task scope
+- repository is in a broken state before execution starts
+
+### Blocked Output Expectation
+When blocked, create a Markdown file in `tasks/blocked/` that includes:
+- task name
+- timestamp
+- reason blocked
+- files examined
+- recommended next step
+
+Example:
+
+```markdown
+# Blocked: 02-add-unit-tests-auth
+
+## Reason
+Existing authentication tests are already failing on the current branch before task execution.
+
+## Evidence
+- `AuthTests.cs` fails in current HEAD
+- Build fails before new changes are applied
+
+## Recommended Next Step
+Resolve the baseline test failure, then re-queue this task.
+```
+
+---
+
+## Logging and Auditability
+
+Recommended logging events:
+- runner start
+- repository start
+- configuration loaded
+- task discovered
+- task started
+- Claude invocation started
+- Claude invocation finished
+- validation result
+- Git commit created
+- Git push completed
+- task moved to destination folder
+- blocker detected
+- repository completed
+- runner completed
+
+Recommended log fields:
+- timestamp
+- repository path
+- task filename
+- task state
+- elapsed duration
+- commit hash if created
+- error details if present
 
 ---
 
@@ -212,13 +574,51 @@ Register-ScheduledTask `
   -RunLevel Highest
 ```
 
-Set `WakeToRun` if your machine sleeps at night. The 6-hour execution limit prevents runaway sessions.
+Notes:
+- `WakeToRun` should be enabled if the machine may sleep overnight
+- the execution time limit prevents runaway sessions
+- production use should also consider working directory, credential context, and network availability
 
 ---
 
-## Including This Vision in Prompts
+## Recommended CLAUDE.md Contract
 
-Every task file should begin with a brief system context block so Claude understands the environment it is operating in. Paste this at the top of each task file, or reference it from your repo's `CLAUDE.md`:
+Suggested `CLAUDE.md` content:
+
+```markdown
+# CLAUDE.md
+
+## Execution Context
+This repository may be modified by an overnight automation runner.
+
+## General Rules
+- Stay within the requested task scope
+- Make the smallest reasonable change
+- Preserve repository conventions
+- Avoid unrelated refactors
+- Prefer explicit and readable code
+- Do not ask clarifying questions during unattended execution
+- If blocked, explain the blocker clearly
+
+## Quality Bar
+- Build must succeed if buildability is expected for the task
+- Relevant tests should pass
+- Do not leave partial implementations silently
+
+## Files and Scope
+- Read task files from `tasks/todo/`
+- Use `tasks/reference/` when relevant
+- Treat each task as isolated
+
+## Blocked Behavior
+If the task cannot be completed safely, produce a clear explanation for `tasks/blocked/`
+```
+
+---
+
+## Prompt Context Block for Tasks
+
+If needed, include this at the top of each task file:
 
 ```markdown
 ## Context
@@ -226,45 +626,73 @@ Every task file should begin with a brief system context block so Claude underst
 This task is being executed by an automated overnight runner.
 
 - Changes will be committed automatically after this task completes
-- Do not ask clarifying questions — make reasonable assumptions and note them in the commit message
-- Follow all conventions in CLAUDE.md
-- If a task cannot be completed safely, create a file at `tasks/blocked/<filename>.md` explaining why
-- All tests should pass before considering a task complete
+- Do not ask clarifying questions
+- Make reasonable assumptions and keep them minimal
+- Follow all conventions in `CLAUDE.md`
+- If the task cannot be completed safely, create a blocked explanation
+- All relevant tests should pass before considering the task complete
 ```
 
-Placing this context in `CLAUDE.md` at the repo root means Claude picks it up automatically on every run without needing to repeat it in each task file.
+If this guidance is already in `CLAUDE.md`, it does not need to be repeated in every task file.
 
 ---
 
 ## Morning Review Workflow
 
 ```bash
-# Pull overnight results
 git pull
-
-# Review what ran
 git log --oneline
-
-# Inspect a specific task's changes
-git show d4e5f6
-
-# If you like everything, queue the next batch
-# Drop new .md files into tasks/todo/ and push
-
-# If you want to undo a task
+git show <commit-hash>
 git revert <commit-hash>
 ```
 
+Typical workflow:
+1. Pull overnight changes
+2. Review commit history
+3. Inspect each task commit independently
+4. Keep, revert, or revise as needed
+5. Queue the next batch of tasks
+
 ---
 
-## Design Principles
+## AI-Optimized Summary
 
-**One task, one commit.** Granular commits make every change reviewable and independently reversible. Never batch multiple tasks into a single commit.
+### Project Type
+- Windows automation tool
+- .NET console application
+- local repository orchestration
+- Git-integrated coding workflow
+- unattended AI task execution
 
-**Tasks are self-contained.** Each task file should describe enough context to execute without relying on the runner's session state. Claude has no memory between tasks.
+### Key Invariants
+- one completed task = one commit
+- task files are processed in deterministic filename order
+- repository settings override global settings
+- blocked tasks must be explicit
+- human review happens after execution, before merge
+- no automatic merge to main
+- no reliance on cross-task memory
 
-**Fail visibly.** If Claude cannot complete a task, it should write a blocked file rather than produce broken code silently. The runner moves the task to `tasks/blocked/` and continues to the next task.
+### Primary Inputs
+- `appsettings.json`
+- `tasks/settings.json`
+- `CLAUDE.md`
+- `tasks/todo/*.md`
+- repository working tree
+- optional `tasks/reference/*`
 
-**You stay in control.** Nothing merges to your main branch automatically. The runner commits to whatever branch is currently checked out. You review and decide what stays.
+### Primary Outputs
+- code changes in repository
+- Git commits
+- moved task files
+- logs
+- blocked explanations
+- pushed branch updates if configured
 
-**Prompts are code.** Task files live in the repo alongside the code they affect. They are version-controlled, can be iterated on, and serve as a record of intent — not just a log of what changed, but why.
+### Preferred AI Behavior
+- be deterministic
+- stay in scope
+- preserve conventions
+- avoid unnecessary changes
+- fail clearly
+- keep commits atomic
