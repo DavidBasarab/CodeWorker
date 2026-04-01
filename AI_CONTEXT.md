@@ -131,12 +131,15 @@ If a task cannot be completed safely:
 ## Commit Strategy
 - Exactly one commit per successful task
 - Commit only after task completion
-- Commit message should map clearly to task filename
+- Commit message format: `{CommitMessagePrefix} {task-filename-without-extension}` (e.g. `🤖 01-refactor-auth-service`)
 
-Recommended format:
-```text
-🤖 01-refactor-auth-service
-```
+## Git Rules
+- If `Git.CommitAfterEachTask` is true: runner stages all changes (`git add -A`) and commits after each successful task
+- If `Git.PushAfterEachTask` is true: runner pushes to remote after each commit
+- If commit fails → stop processing this repository immediately, other repositories continue
+- If push fails (merge conflict, network, auth) → stop processing this repository immediately, other repositories continue
+- Merge conflicts are logged, never resolved automatically — user must handle manually
+- Blocked tasks do not produce commits or pushes
 
 ## Rollback Model
 Because each task is one commit:

@@ -363,6 +363,19 @@ Optional richer format:
 🤖 Task 01: refactor auth service
 ```
 
+### Git Integration Rules
+
+The runner performs git operations after each successful task:
+
+1. **Commit**: If `Git.CommitAfterEachTask` is `true`, the runner stages all changes (`git add -A`) and commits with the message `{CommitMessagePrefix} {task-filename-without-extension}` (e.g. `🤖 01-refactor-auth-service`).
+2. **Push**: If `Git.PushAfterEachTask` is `true`, the runner pushes to the remote after committing.
+3. **Failure handling**:
+   - If `git commit` fails, the runner **stops processing the current repository** immediately. No further tasks run against a repo with a failed commit.
+   - If `git push` fails (merge conflict, auth error, network issue), the runner **stops processing the current repository** immediately. The failure is logged but no resolution is attempted.
+   - Other configured repositories continue processing normally.
+   - The user must resolve any git issues manually before the next run.
+4. **Blocked tasks** do not produce commits or pushes — git operations only occur for successful tasks.
+
 ---
 
 ## Rollback Strategy

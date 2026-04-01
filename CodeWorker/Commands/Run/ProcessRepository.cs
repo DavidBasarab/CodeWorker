@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Claude;
+using FatCat.CodeWorker.Git;
 using FatCat.CodeWorker.Settings;
 using Serilog;
 
@@ -15,6 +16,8 @@ public class ProcessRepository(
 	IMoveTask moveTask,
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
+	ICommitChanges commitChanges,
+	IPushChanges pushChanges,
 	ILogger logger
 ) : IProcessRepository
 {
@@ -71,6 +74,46 @@ public class ProcessRepository(
 			else
 			{
 				moveTask.Move(pendingFilePath, doneFolder);
+
+				if (repoSettings.Git?.CommitAfterEachTask == true)
+				{
+					var taskNameWithoutExtension = Path.GetFileNameWithoutExtension(taskFile);
+					var commitMessage = $"{repoSettings.Git.CommitMessagePrefix} {taskNameWithoutExtension}";
+
+					var commitResult = await commitChanges.Commit(repository.Path, commitMessage);
+
+					if (repoSettings.LogResults)
+					{
+						await logTaskResult.Log(repository.Path, taskName, commitResult);
+					}
+
+					if (commitResult.ExitCode != 0)
+					{
+						logger.Error("Commit failed for task {TaskName}, stopping repository processing", taskName);
+
+						return;
+					}
+				}
+
+				if (repoSettings.Git?.PushAfterEachTask == true)
+				{
+					var pushResult = await pushChanges.Push(repository.Path);
+
+					if (repoSettings.LogResults)
+					{
+						await logTaskResult.Log(repository.Path, taskName, pushResult);
+					}
+
+					if (pushResult.ExitCode != 0)
+					{
+						logger.Error(
+							"Push failed for task {TaskName}, possible merge conflict — stopping repository processing",
+							taskName
+						);
+
+						return;
+					}
+				}
 			}
 		}
 	}

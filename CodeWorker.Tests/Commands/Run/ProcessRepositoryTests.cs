@@ -1,5 +1,6 @@
 using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
+using FatCat.CodeWorker.Git;
 using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
 using Serilog;
@@ -13,11 +14,15 @@ public class ProcessRepositoryTests
 	private readonly IMoveTask moveTask;
 	private readonly IRunClaude runClaude;
 	private readonly ILogTaskResult logTaskResult;
+	private readonly ICommitChanges commitChanges;
+	private readonly IPushChanges pushChanges;
 	private readonly ILogger logger;
 	private readonly ProcessRepository processRepository;
 	private readonly RepositorySettings repositorySettings;
 	private RepoSettings repoSettings;
 	private ProcessResult claudeResult;
+	private ProcessResult commitResult;
+	private ProcessResult pushResult;
 
 	public ProcessRepositoryTests()
 	{
@@ -26,6 +31,8 @@ public class ProcessRepositoryTests
 		moveTask = A.Fake<IMoveTask>();
 		runClaude = A.Fake<IRunClaude>();
 		logTaskResult = A.Fake<ILogTaskResult>();
+		commitChanges = A.Fake<ICommitChanges>();
+		pushChanges = A.Fake<IPushChanges>();
 		logger = A.Fake<ILogger>();
 
 		repositorySettings = new RepositorySettings { Path = @"C:\Projects\my-api", Enabled = true };
@@ -34,6 +41,12 @@ public class ProcessRepositoryTests
 		{
 			Enabled = true,
 			LogResults = true,
+			Git = new GitSettings
+			{
+				CommitAfterEachTask = true,
+				PushAfterEachTask = true,
+				CommitMessagePrefix = "🤖",
+			},
 			Tasks = new TaskSettings
 			{
 				TodoFolder = "tasks/todo",
@@ -51,13 +64,39 @@ public class ProcessRepositoryTests
 			ErrorLines = new List<string>(),
 		};
 
+		commitResult = new ProcessResult
+		{
+			ExitCode = 0,
+			OutputLines = new List<string>(),
+			ErrorLines = new List<string>(),
+		};
+
+		pushResult = new ProcessResult
+		{
+			ExitCode = 0,
+			OutputLines = new List<string>(),
+			ErrorLines = new List<string>(),
+		};
+
 		A.CallTo(() => loadRepoSettings.Load(A<string>.Ignored)).Returns(Task.FromResult(repoSettings));
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored)).Returns(new List<string>());
 		A.CallTo(() => runClaude.Run(A<string>.Ignored)).Returns(Task.FromResult(claudeResult));
 		A.CallTo(() => logTaskResult.Log(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
 			.Returns(Task.CompletedTask);
+		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored))
+			.ReturnsLazily(() => Task.FromResult(commitResult));
+		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).ReturnsLazily(() => Task.FromResult(pushResult));
 
-		processRepository = new ProcessRepository(loadRepoSettings, discoverTasks, moveTask, runClaude, logTaskResult, logger);
+		processRepository = new ProcessRepository(
+			loadRepoSettings,
+			discoverTasks,
+			moveTask,
+			runClaude,
+			logTaskResult,
+			commitChanges,
+			pushChanges,
+			logger
+		);
 	}
 
 	[Fact]
@@ -215,5 +254,146 @@ public class ProcessRepositoryTests
 
 		A.CallTo(() => logger.Information(A<string>.That.Contains("Starting task"), A<string>.That.Contains("01_MyTask.md")))
 			.MustHaveHappened();
+	}
+
+	[Fact]
+	public async Task CommitAfterSuccessfulTaskWhenConfigured()
+	{
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => commitChanges.Commit(@"C:\Projects\my-api", A<string>.Ignored)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task UseCorrectCommitMessageFormat()
+	{
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, "🤖 01_MyTask")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task NotCommitWhenCommitAfterEachTaskIsFalse()
+	{
+		repoSettings.Git.CommitAfterEachTask = false;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotCommitWhenTaskIsBlocked()
+	{
+		claudeResult.ExitCode = 1;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task StopRepositoryProcessingWhenCommitFails()
+	{
+		commitResult.ExitCode = 1;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(
+				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
+			);
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => runClaude.Run(A<string>.Ignored)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task PushAfterSuccessfulTaskWhenConfigured()
+	{
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => pushChanges.Push(@"C:\Projects\my-api")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task NotPushWhenPushAfterEachTaskIsFalse()
+	{
+		repoSettings.Git.PushAfterEachTask = false;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotPushWhenTaskIsBlocked()
+	{
+		claudeResult.ExitCode = 1;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task StopRepositoryProcessingWhenPushFails()
+	{
+		pushResult.ExitCode = 1;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(
+				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
+			);
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => runClaude.Run(A<string>.Ignored)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task NotCommitWhenGitSettingsIsNull()
+	{
+		repoSettings.Git = null;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotPushWhenGitSettingsIsNull()
+	{
+		repoSettings.Git = null;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
 	}
 }
