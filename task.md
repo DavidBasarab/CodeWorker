@@ -38,7 +38,7 @@ Going to run the application tasks.  This will be from the appsettings.json.  Th
 
 ## References
 
-- Ready the `README.md` for an overview of the application
+- Read the `README.md` for an overview of the application
 - <!-- Related issue, PR, or ticket -->
 - <!-- Relevant existing classes or files Claude should read first -->
 
