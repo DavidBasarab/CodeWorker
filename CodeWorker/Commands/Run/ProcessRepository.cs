@@ -17,6 +17,7 @@ public class ProcessRepository(
 	IMoveTask moveTask,
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
+	IGenerateBlockedExplanation generateBlockedExplanation,
 	ICommitChanges commitChanges,
 	IPushChanges pushChanges,
 	ILogger logger
@@ -74,6 +75,7 @@ public class ProcessRepository(
 			if (isBlocked)
 			{
 				moveTask.Move(pendingFilePath, blockedFolder);
+				await generateBlockedExplanation.Generate(blockedFolder, taskName, result);
 
 				if (repoSettings.Tasks.StopOnBlocked)
 				{

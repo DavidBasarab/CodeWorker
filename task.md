@@ -1,14 +1,14 @@
 
 ## Feature Context
 
-Validate repository before doing any work.
+Tasks move to `blocked/` but no structured Markdown explanation (task name, timestamp, reason, recommended fix) is generated
 
 ## Tasks
 
-- [ ] Add validation interface
-- [ ] Call validation before doing any work
-- [ ] if validation fails then make the repository as broken and the user will have to clear
-- [ ] If one repository is broken the others that are not broken can be run
+- [ ] Create a way to provide an explanation on why an item is blocked
+- [ ] If Possible a recommend fix
+- [ ] If the issue is from claude write whatever output claude had, for instance if the user runs out of tokens as an example that will only be known by claude
+- [ ] This will be logged by the tool and in the user repository
 
 ## Required Steps
 

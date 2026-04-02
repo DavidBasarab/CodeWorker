@@ -17,6 +17,7 @@ public class ProcessRepositoryTests
 	private readonly ILogTaskResult logTaskResult;
 	private readonly ICommitChanges commitChanges;
 	private readonly IPushChanges pushChanges;
+	private readonly IGenerateBlockedExplanation generateBlockedExplanation;
 	private readonly ILogger logger;
 	private readonly ProcessRepository processRepository;
 	private readonly RepositorySettings repositorySettings;
@@ -34,6 +35,7 @@ public class ProcessRepositoryTests
 		moveTask = A.Fake<IMoveTask>();
 		runClaude = A.Fake<IRunClaude>();
 		logTaskResult = A.Fake<ILogTaskResult>();
+		generateBlockedExplanation = A.Fake<IGenerateBlockedExplanation>();
 		commitChanges = A.Fake<ICommitChanges>();
 		pushChanges = A.Fake<IPushChanges>();
 		logger = A.Fake<ILogger>();
@@ -90,6 +92,8 @@ public class ProcessRepositoryTests
 		A.CallTo(() => runClaude.Run(A<string>.Ignored)).Returns(Task.FromResult(claudeResult));
 		A.CallTo(() => logTaskResult.Log(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
 			.Returns(Task.CompletedTask);
+		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
+			.Returns(Task.CompletedTask);
 		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored))
 			.ReturnsLazily(() => Task.FromResult(commitResult));
 		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).ReturnsLazily(() => Task.FromResult(pushResult));
@@ -101,6 +105,7 @@ public class ProcessRepositoryTests
 			moveTask,
 			runClaude,
 			logTaskResult,
+			generateBlockedExplanation,
 			commitChanges,
 			pushChanges,
 			logger
@@ -439,5 +444,46 @@ public class ProcessRepositoryTests
 		await processRepository.Process(repositorySettings);
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task GenerateBlockedExplanationWhenTaskIsBlocked()
+	{
+		claudeResult.ExitCode = 1;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks/blocked", "01_MyTask.md", claudeResult))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task NotGenerateBlockedExplanationWhenTaskSucceeds()
+	{
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
+			.MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task GenerateBlockedExplanationBeforeStopOnBlocked()
+	{
+		claudeResult.ExitCode = 1;
+		repoSettings.Tasks.StopOnBlocked = true;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
+			.MustHaveHappenedOnceExactly();
 	}
 }
