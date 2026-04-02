@@ -1,21 +1,19 @@
-# Task
-
-<!-- One-sentence description of what this task accomplishes -->
 
 ## Feature Context
 
-Going to run the application tasks.  This will be from the appsettings.json.  The flow is going to be read the repositories from the appsettings.json.  Pull a task from the `todo` folder.  Move it into the `pending` folder.  Have claude do the work.  Once claude is done commit the change.  Move the task from `pending` to `done`. 
+Validate repository before doing any work.
 
 ## Tasks
 
-- [ ] <!-- Specific, actionable item -->
-- [ ] <!-- Specific, actionable item -->
-- [ ] <!-- Specific, actionable item -->
+- [ ] Add validation interface
+- [ ] Call validation before doing any work
+- [ ] if validation fails then make the repository as broken and the user will have to clear
+- [ ] If one repository is broken the others that are not broken can be run
 
 ## Required Steps
 
-1. Run `dotnet format` on all created/modified `.cs` files
-2. Run `dotnet build` to apply CSharpier changes
+1. Do all tasks
+2. Run all verification tests
 
 ## Verification
 
@@ -30,7 +28,7 @@ Going to run the application tasks.  This will be from the appsettings.json.  Th
 
 ## References
 
-- Ready the `README.md` for an overview of the application
+- Read AI_CONTEXT.md before doing anything.
 - <!-- Related issue, PR, or ticket -->
 - <!-- Relevant existing classes or files Claude should read first -->
 
