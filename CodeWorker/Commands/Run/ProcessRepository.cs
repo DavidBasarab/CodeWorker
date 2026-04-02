@@ -11,6 +11,7 @@ public interface IProcessRepository
 }
 
 public class ProcessRepository(
+	IValidateRepository validateRepository,
 	ILoadRepoSettings loadRepoSettings,
 	IDiscoverTasks discoverTasks,
 	IMoveTask moveTask,
@@ -23,6 +24,19 @@ public class ProcessRepository(
 {
 	public async Task Process(RepositorySettings repository)
 	{
+		var validationResult = validateRepository.Validate(repository);
+
+		if (!validationResult.IsValid)
+		{
+			logger.Error(
+				"Repository {RepositoryPath} is broken — skipping. Errors: {Errors}",
+				repository.Path,
+				string.Join("; ", validationResult.Errors)
+			);
+
+			return;
+		}
+
 		var repoSettings = await loadRepoSettings.Load(repository.Path);
 
 		if (!repoSettings.Enabled)

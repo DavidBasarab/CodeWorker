@@ -9,6 +9,7 @@ namespace Testing.FatCat.CodeWorker.Commands.Run;
 
 public class ProcessRepositoryTests
 {
+	private readonly IValidateRepository validateRepository;
 	private readonly ILoadRepoSettings loadRepoSettings;
 	private readonly IDiscoverTasks discoverTasks;
 	private readonly IMoveTask moveTask;
@@ -23,9 +24,11 @@ public class ProcessRepositoryTests
 	private ProcessResult claudeResult;
 	private ProcessResult commitResult;
 	private ProcessResult pushResult;
+	private RepositoryValidationResult validationResult;
 
 	public ProcessRepositoryTests()
 	{
+		validateRepository = A.Fake<IValidateRepository>();
 		loadRepoSettings = A.Fake<ILoadRepoSettings>();
 		discoverTasks = A.Fake<IDiscoverTasks>();
 		moveTask = A.Fake<IMoveTask>();
@@ -36,6 +39,10 @@ public class ProcessRepositoryTests
 		logger = A.Fake<ILogger>();
 
 		repositorySettings = new RepositorySettings { Path = @"C:\Projects\my-api", Enabled = true };
+
+		validationResult = new RepositoryValidationResult { IsValid = true };
+
+		A.CallTo(() => validateRepository.Validate(A<RepositorySettings>.Ignored)).ReturnsLazily(() => validationResult);
 
 		repoSettings = new RepoSettings
 		{
@@ -88,6 +95,7 @@ public class ProcessRepositoryTests
 		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).ReturnsLazily(() => Task.FromResult(pushResult));
 
 		processRepository = new ProcessRepository(
+			validateRepository,
 			loadRepoSettings,
 			discoverTasks,
 			moveTask,
@@ -395,5 +403,41 @@ public class ProcessRepositoryTests
 		await processRepository.Process(repositorySettings);
 
 		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task ValidateRepositoryBeforeProcessing()
+	{
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => validateRepository.Validate(repositorySettings)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task SkipRepositoryWhenValidationFails()
+	{
+		validationResult = new RepositoryValidationResult
+		{
+			IsValid = false,
+			Errors = new List<string> { "Directory not found: C:\\Projects\\my-api\\tasks" },
+		};
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => loadRepoSettings.Load(A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotDiscoverTasksWhenValidationFails()
+	{
+		validationResult = new RepositoryValidationResult
+		{
+			IsValid = false,
+			Errors = new List<string> { "Directory not found: C:\\Projects\\my-api\\tasks" },
+		};
+
+		await processRepository.Process(repositorySettings);
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored)).MustNotHaveHappened();
 	}
 }
