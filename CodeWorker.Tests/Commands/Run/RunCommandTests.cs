@@ -25,10 +25,19 @@ public class RunCommandTests
 				new() { Path = @"C:\Projects\my-api", Enabled = true },
 				new() { Path = @"C:\Projects\my-frontend", Enabled = true },
 			},
+			Claude = new ClaudeSettings
+			{
+				Model = "claude-opus-4-6",
+				MaxTurns = 10,
+				SkipPermissions = true,
+				OutputFormat = "json",
+				TimeoutMinutes = 30,
+			},
 		};
 
 		A.CallTo(() => loadAppSettings.Load()).Returns(Task.FromResult(appSettings));
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored)).Returns(Task.CompletedTask);
+		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored, A<ClaudeSettings>.Ignored))
+			.Returns(Task.CompletedTask);
 
 		command = new RunCommand(loadAppSettings, processRepository, logger);
 	}
@@ -54,7 +63,8 @@ public class RunCommandTests
 	{
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored)).MustHaveHappened(2, Times.Exactly);
+		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored, A<ClaudeSettings>.Ignored))
+			.MustHaveHappened(2, Times.Exactly);
 	}
 
 	[Fact]
@@ -62,7 +72,12 @@ public class RunCommandTests
 	{
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.That.Matches(r => r.Path == @"C:\Projects\my-api")))
+		A.CallTo(() =>
+				processRepository.Process(
+					A<RepositorySettings>.That.Matches(r => r.Path == @"C:\Projects\my-api"),
+					A<ClaudeSettings>.Ignored
+				)
+			)
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -71,7 +86,12 @@ public class RunCommandTests
 	{
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.That.Matches(r => r.Path == @"C:\Projects\my-frontend")))
+		A.CallTo(() =>
+				processRepository.Process(
+					A<RepositorySettings>.That.Matches(r => r.Path == @"C:\Projects\my-frontend"),
+					A<ClaudeSettings>.Ignored
+				)
+			)
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -84,12 +104,27 @@ public class RunCommandTests
 	}
 
 	[Fact]
+	public async Task PassGlobalClaudeSettingsToProcessRepository()
+	{
+		await command.Execute(Array.Empty<string>());
+
+		A.CallTo(() =>
+				processRepository.Process(
+					A<RepositorySettings>.Ignored,
+					A<ClaudeSettings>.That.Matches(c => c.Model == "claude-opus-4-6" && c.MaxTurns == 10)
+				)
+			)
+			.MustHaveHappened();
+	}
+
+	[Fact]
 	public async Task HandleEmptyRepositoryList()
 	{
 		appSettings.Repositories = new List<RepositorySettings>();
 
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored, A<ClaudeSettings>.Ignored))
+			.MustNotHaveHappened();
 	}
 }

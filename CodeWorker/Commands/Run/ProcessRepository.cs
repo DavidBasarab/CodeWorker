@@ -7,7 +7,7 @@ namespace FatCat.CodeWorker.Commands.Run;
 
 public interface IProcessRepository
 {
-	Task Process(RepositorySettings repository);
+	Task Process(RepositorySettings repository, ClaudeSettings globalClaudeSettings);
 }
 
 public class ProcessRepository(
@@ -23,7 +23,7 @@ public class ProcessRepository(
 	ILogger logger
 ) : IProcessRepository
 {
-	public async Task Process(RepositorySettings repository)
+	public async Task Process(RepositorySettings repository, ClaudeSettings globalClaudeSettings)
 	{
 		var validationResult = validateRepository.Validate(repository);
 
@@ -47,6 +47,8 @@ public class ProcessRepository(
 			return;
 		}
 
+		var effectiveClaudeSettings = globalClaudeSettings.MergeWith(repoSettings.Claude);
+
 		var todoFolder = Path.Combine(repository.Path, repoSettings.Tasks.TodoFolder);
 		var pendingFolder = Path.Combine(repository.Path, repoSettings.Tasks.PendingFolder);
 		var doneFolder = Path.Combine(repository.Path, repoSettings.Tasks.DoneFolder);
@@ -63,7 +65,7 @@ public class ProcessRepository(
 
 			moveTask.Move(taskFile, pendingFolder);
 
-			var result = await runClaude.Run(pendingFilePath);
+			var result = await runClaude.Run(pendingFilePath, effectiveClaudeSettings);
 
 			if (repoSettings.LogResults)
 			{

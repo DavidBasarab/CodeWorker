@@ -16,7 +16,7 @@ public class RunCommand(ILoadAppSettings loadAppSettings, IProcessRepository pro
 
 		foreach (var repository in settings.Repositories)
 		{
-			await processRepository.Process(repository);
+			await processRepository.Process(repository, settings.Claude);
 		}
 
 		logger.Information("Task runner complete");

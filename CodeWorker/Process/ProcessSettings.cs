@@ -7,4 +7,6 @@ public class ProcessSettings
 	public string Arguments { get; set; }
 
 	public string WorkingDirectory { get; set; }
+
+	public int TimeoutMilliseconds { get; set; }
 }
