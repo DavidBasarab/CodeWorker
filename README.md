@@ -567,11 +567,90 @@ Recommended log fields:
 
 ---
 
+## Installation on Windows
+
+### Quick Install
+
+Run the included install script from PowerShell. It clones the repo, builds, publishes, and adds the tool to your PATH:
+
+```powershell
+# Default install to C:\Tools\CodeWorker
+pwsh -File Install-CodeWorker.ps1
+
+# Or specify a custom install path
+pwsh -File Install-CodeWorker.ps1 -InstallPath "D:\MyTools\CodeWorker"
+```
+
+If you don't have the repo locally yet, download and run the script directly:
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DavidBasarab/CodeWorker/main/Install-CodeWorker.ps1" -OutFile "$env:TEMP\Install-CodeWorker.ps1"
+pwsh -File "$env:TEMP\Install-CodeWorker.ps1"
+```
+
+The script checks for prerequisites, clones to a temp folder, publishes a release build, and adds the output folder to your user PATH. Run it again at any time to update to the latest version.
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) installed
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and available on PATH
+- Git installed and available on PATH
+
+### Manual Build and Publish
+
+From the repository root, publish a self-contained release build:
+
+```powershell
+dotnet publish CodeWorker/CodeWorker.csproj -c Release -o C:\Tools\CodeWorker
+```
+
+This produces `FatCatCodeWorker.exe` (and its dependencies) in `C:\Tools\CodeWorker`.
+
+You can choose any output folder — `C:\Tools\CodeWorker` is used as an example throughout this README.
+
+### Add to PATH
+
+Add the publish folder to your system PATH so `FatCatCodeWorker` can be invoked from any command prompt:
+
+```powershell
+# Add to the current user's PATH permanently
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$currentPath;C:\Tools\CodeWorker", "User")
+```
+
+After setting this, open a new terminal and verify:
+
+```powershell
+FatCatCodeWorker --help
+```
+
+### Configure
+
+Copy or edit `appsettings.json` in the publish folder (`C:\Tools\CodeWorker\appsettings.json`) to point at your repositories. See the **Global Configuration** section below for the full schema.
+
+For each repository, run the setup command to create the required `tasks/` folder structure:
+
+```powershell
+FatCatCodeWorker setup --path C:\Projects\my-api
+```
+
+### Update
+
+To update after pulling new changes:
+
+```powershell
+dotnet publish CodeWorker/CodeWorker.csproj -c Release -o C:\Tools\CodeWorker
+```
+
+The same command overwrites the previous build in place.
+
+---
+
 ## Windows Task Scheduler Setup
 
 ```powershell
 $action = New-ScheduledTaskAction `
-  -Execute "C:\Tools\ClaudeRunner\ClaudeRunner.exe"
+  -Execute "C:\Tools\CodeWorker\FatCatCodeWorker.exe"
 
 $trigger = New-ScheduledTaskTrigger -Daily -At 2:00AM
 

@@ -1,9 +1,3 @@
-## High Priority (Core Workflow Gaps)
-
-
-
-1. **Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
-
 ## Medium Priority (Workflow Completeness)
 
 6. **Failed vs Blocked distinction** — README defines both states but only Blocked (non-zero exit) is implemented. No separation between infrastructure failures and logical blockers
