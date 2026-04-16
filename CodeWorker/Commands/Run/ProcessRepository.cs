@@ -18,6 +18,7 @@ public class ProcessRepository(
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
 	IGenerateBlockedExplanation generateBlockedExplanation,
+	ICollectReferenceFiles collectReferenceFiles,
 	ICommitChanges commitChanges,
 	IPushChanges pushChanges,
 	ILogger logger
@@ -53,6 +54,16 @@ public class ProcessRepository(
 		var pendingFolder = Path.Combine(repository.Path, repoSettings.Tasks.PendingFolder);
 		var doneFolder = Path.Combine(repository.Path, repoSettings.Tasks.DoneFolder);
 		var blockedFolder = Path.Combine(repository.Path, repoSettings.Tasks.BlockedFolder);
+		var referenceFolder = Path.Combine(repository.Path, repoSettings.Tasks.ReferenceFolder);
+
+		var referenceFiles = await collectReferenceFiles.Collect(referenceFolder);
+
+		if (referenceFiles.Count > 0)
+		{
+			var fileNames = string.Join(", ", referenceFiles.Select(f => f.Name));
+
+			logger.Information("Including {Count} reference file(s): {FileNames}", referenceFiles.Count, fileNames);
+		}
 
 		var taskFiles = discoverTasks.Discover(todoFolder);
 
@@ -65,11 +76,11 @@ public class ProcessRepository(
 
 			moveTask.Move(taskFile, pendingFolder);
 
-			var result = await runClaude.Run(pendingFilePath, effectiveClaudeSettings);
+			var result = await runClaude.Run(pendingFilePath, effectiveClaudeSettings, referenceFiles);
 
 			if (repoSettings.LogResults)
 			{
-				await logTaskResult.Log(repository.Path, taskName, result);
+				await logTaskResult.Log(repository.Path, taskName, result, referenceFiles);
 			}
 
 			var isBlocked = result.ExitCode != 0;
@@ -102,7 +113,7 @@ public class ProcessRepository(
 
 					if (repoSettings.LogResults)
 					{
-						await logTaskResult.Log(repository.Path, taskName, commitResult);
+						await logTaskResult.Log(repository.Path, taskName, commitResult, referenceFiles);
 					}
 
 					if (commitResult.ExitCode != 0)
@@ -119,7 +130,7 @@ public class ProcessRepository(
 
 					if (repoSettings.LogResults)
 					{
-						await logTaskResult.Log(repository.Path, taskName, pushResult);
+						await logTaskResult.Log(repository.Path, taskName, pushResult, referenceFiles);
 					}
 
 					if (pushResult.ExitCode != 0)

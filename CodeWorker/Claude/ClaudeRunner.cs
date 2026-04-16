@@ -1,4 +1,5 @@
 using System.Text;
+using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
 using Serilog;
@@ -7,12 +8,16 @@ namespace FatCat.CodeWorker.Claude;
 
 public interface IRunClaude
 {
-	Task<ProcessResult> Run(string markdownFilePath, ClaudeSettings claudeSettings);
+	Task<ProcessResult> Run(string markdownFilePath, ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles);
 }
 
 public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 {
-	public async Task<ProcessResult> Run(string markdownFilePath, ClaudeSettings claudeSettings)
+	public async Task<ProcessResult> Run(
+		string markdownFilePath,
+		ClaudeSettings claudeSettings,
+		List<ReferenceFile> referenceFiles
+	)
 	{
 		logger.Information("Starting Claude with markdown file {MarkdownFilePath}", markdownFilePath);
 
@@ -25,7 +30,7 @@ public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 			claudeSettings.TimeoutMinutes
 		);
 
-		var arguments = BuildArguments(markdownFilePath, claudeSettings);
+		var arguments = BuildArguments(markdownFilePath, claudeSettings, referenceFiles);
 
 		var settings = new ProcessSettings
 		{
@@ -46,7 +51,21 @@ public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 		return result;
 	}
 
-	private string BuildArguments(string markdownFilePath, ClaudeSettings claudeSettings)
+	private string BuildReferenceContent(List<ReferenceFile> referenceFiles)
+	{
+		var contentBuilder = new StringBuilder();
+
+		foreach (var file in referenceFiles)
+		{
+			contentBuilder.AppendLine($"## Reference: {file.Name}");
+			contentBuilder.AppendLine(file.Content);
+			contentBuilder.AppendLine();
+		}
+
+		return contentBuilder.ToString().Replace("\"", "\\\"").TrimEnd();
+	}
+
+	private string BuildArguments(string markdownFilePath, ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles)
 	{
 		var builder = new StringBuilder();
 
@@ -83,6 +102,13 @@ public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 			{
 				builder.Append($" --allowedTools \"{tool}\"");
 			}
+		}
+
+		if (referenceFiles is { Count: > 0 })
+		{
+			var referenceContent = BuildReferenceContent(referenceFiles);
+
+			builder.Append($" --append-system-prompt \"{referenceContent}\"");
 		}
 
 		return builder.ToString();

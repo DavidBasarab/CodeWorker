@@ -1,14 +1,12 @@
 
 ## Feature Context
 
-**Claude CLI config passthrough** — Settings define `Model`, `MaxTurns`, `TimeoutMinutes`, `AllowedTools`, `OutputFormat`, but `ClaudeRunner` only uses `-p --input-file`. Most config options aren't passed as CLI args
+**Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
 
 ## Tasks
 
-- [x] Create a way to pass config items
-- [x] Only include the items that is given, if not value is defined then let claude use its default
-- [x] The user define settings always rules but if not then use the application default settings
-- [x] Log what settings was used for each task.
+- [ ] Create a way to pass reference files
+- [ ] Log what files were used for each task.
 
 ## Required Steps
 
@@ -17,20 +15,18 @@
 
 ## Verification
 
-- [x] Tests written before implementation (TDD)
-- [x] All tests pass (`dotnet test`)
-- [x] `dotnet format` run on all modified files
-- [x] `dotnet build` to apply CSharpier changes
-- [x] No compiler warnings introduced
-- [x] Namespaces match folder paths exactly
-- [x] No banned patterns used (see `.claude/rules/not-allowed.md`)
-- [x] Report results before finishing
+- [ ] Tests written before implementation (TDD)
+- [ ] All tests pass (`dotnet test`)
+- [ ] `dotnet format` run on all modified files
+- [ ] `dotnet build` to apply CSharpier changes
+- [ ] No compiler warnings introduced
+- [ ] Namespaces match folder paths exactly
+- [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
+- [ ] Report results before finishing
 
 ## References
 
-- Read AI_CONTEXT.md before doing anything.
-- C:\Code\CodeWorker\CodeWorker\appsettings.json
-- 
+- Read AI_CONTEXT.md before doing anything. 
 
 ## Notes
 

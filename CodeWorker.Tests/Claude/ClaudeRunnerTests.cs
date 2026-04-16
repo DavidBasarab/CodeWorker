@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Claude;
+using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
 using Serilog;
@@ -11,6 +12,7 @@ public class ClaudeRunnerTests
 	private readonly ILogger logger;
 	private readonly ClaudeRunner claudeRunner;
 	private readonly string markdownFilePath = @"C:\Tasks\some-task.md";
+	private readonly List<ReferenceFile> referenceFiles;
 	private ProcessResult processResult;
 	private ProcessSettings capturedSettings;
 	private ClaudeSettings claudeSettings;
@@ -47,13 +49,15 @@ public class ClaudeRunnerTests
 			TimeoutMinutes = 0,
 		};
 
+		referenceFiles = new List<ReferenceFile>();
+
 		claudeRunner = new ClaudeRunner(runProcess, logger);
 	}
 
 	[Fact]
 	public async Task PassClaudeAsTheFileName()
 	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.FileName.Should().Be("claude");
 	}
@@ -61,7 +65,7 @@ public class ClaudeRunnerTests
 	[Fact]
 	public async Task IncludeInputFileInArguments()
 	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain($"--input-file \"{markdownFilePath}\"");
 	}
@@ -69,7 +73,7 @@ public class ClaudeRunnerTests
 	[Fact]
 	public async Task IncludePrintFlagInArguments()
 	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("-p");
 	}
@@ -77,7 +81,7 @@ public class ClaudeRunnerTests
 	[Fact]
 	public async Task ReturnTheProcessResult()
 	{
-		var result = await claudeRunner.Run(markdownFilePath, claudeSettings);
+		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		result.Should().BeSameAs(processResult);
 	}
@@ -85,7 +89,7 @@ public class ClaudeRunnerTests
 	[Fact]
 	public async Task LogTheStartOfTheClaudeRun()
 	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		A.CallTo(() => logger.Information("Starting Claude with markdown file {MarkdownFilePath}", markdownFilePath))
 			.MustHaveHappenedOnceExactly();
@@ -96,7 +100,7 @@ public class ClaudeRunnerTests
 	{
 		processResult.ExitCode = 42;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		A.CallTo(() => logger.Information("Claude exited with code {ExitCode}", 42)).MustHaveHappenedOnceExactly();
 	}
@@ -106,7 +110,7 @@ public class ClaudeRunnerTests
 	{
 		processResult.ExitCode = 1;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		A.CallTo(() => logger.Warning("Claude exited with non-zero exit code {ExitCode}", 1)).MustHaveHappenedOnceExactly();
 	}
@@ -116,7 +120,7 @@ public class ClaudeRunnerTests
 	{
 		processResult.ExitCode = 0;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		A.CallTo(() => logger.Warning(A<string>.Ignored, A<int>.Ignored)).MustNotHaveHappened();
 	}
@@ -126,7 +130,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.Model = "claude-sonnet-4-6";
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("--model claude-sonnet-4-6");
 	}
@@ -136,7 +140,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.Model = "";
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--model");
 	}
@@ -146,7 +150,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.Model = null;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--model");
 	}
@@ -156,7 +160,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.MaxTurns = 25;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("--max-turns 25");
 	}
@@ -166,7 +170,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.MaxTurns = 0;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--max-turns");
 	}
@@ -176,7 +180,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.OutputFormat = "json";
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("--output-format json");
 	}
@@ -186,7 +190,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.OutputFormat = "";
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--output-format");
 	}
@@ -196,7 +200,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.SystemPromptFile = "prompt.md";
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("--system-prompt \"prompt.md\"");
 	}
@@ -206,7 +210,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.SystemPromptFile = "";
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--system-prompt");
 	}
@@ -216,7 +220,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.SkipPermissions = true;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("--dangerously-skip-permissions");
 	}
@@ -226,7 +230,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.SkipPermissions = false;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--dangerously-skip-permissions");
 	}
@@ -236,7 +240,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.AllowedTools = new List<string> { "Read", "Write" };
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().Contain("--allowedTools \"Read\"");
 		capturedSettings.Arguments.Should().Contain("--allowedTools \"Write\"");
@@ -247,7 +251,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.AllowedTools = new List<string>();
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--allowedTools");
 	}
@@ -257,7 +261,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.AllowedTools = null;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.Arguments.Should().NotContain("--allowedTools");
 	}
@@ -267,7 +271,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.TimeoutMinutes = 30;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.TimeoutMilliseconds.Should().Be(30 * 60 * 1000);
 	}
@@ -277,7 +281,7 @@ public class ClaudeRunnerTests
 	{
 		claudeSettings.TimeoutMinutes = 0;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		capturedSettings.TimeoutMilliseconds.Should().Be(0);
 	}
@@ -288,7 +292,7 @@ public class ClaudeRunnerTests
 		claudeSettings.Model = "claude-sonnet-4-6";
 		claudeSettings.MaxTurns = 15;
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		A.CallTo(() =>
 				logger.Information(
@@ -313,7 +317,7 @@ public class ClaudeRunnerTests
 			TimeoutMinutes = 30,
 		};
 
-		await claudeRunner.Run(markdownFilePath, claudeSettings);
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		var args = capturedSettings.Arguments;
 
@@ -325,5 +329,59 @@ public class ClaudeRunnerTests
 		args.Should().Contain("--system-prompt \"system.md\"");
 		args.Should().Contain("--dangerously-skip-permissions");
 		args.Should().Contain("--allowedTools \"Read\"");
+	}
+
+	[Fact]
+	public async Task IncludeAppendSystemPromptWhenReferenceFilesExist()
+	{
+		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "some context" });
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().Contain("--append-system-prompt");
+	}
+
+	[Fact]
+	public async Task NotIncludeAppendSystemPromptWhenReferenceFilesAreEmpty()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().NotContain("--append-system-prompt");
+	}
+
+	[Fact]
+	public async Task IncludeReferenceFileNameInAppendSystemPrompt()
+	{
+		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "some context" });
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().Contain("context.md");
+	}
+
+	[Fact]
+	public async Task IncludeReferenceFileContentInAppendSystemPrompt()
+	{
+		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "important context here" });
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().Contain("important context here");
+	}
+
+	[Fact]
+	public async Task IncludeMultipleReferenceFilesInAppendSystemPrompt()
+	{
+		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "context content" });
+		referenceFiles.Add(new ReferenceFile { Name = "schema.md", Content = "schema content" });
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		var args = capturedSettings.Arguments;
+
+		args.Should().Contain("context.md");
+		args.Should().Contain("context content");
+		args.Should().Contain("schema.md");
+		args.Should().Contain("schema content");
 	}
 }

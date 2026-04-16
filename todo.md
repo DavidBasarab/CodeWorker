@@ -1,8 +1,8 @@
 ## High Priority (Core Workflow Gaps)
 
 
-1. **Timeout enforcement** — `TimeoutMinutes` exists in config but nothing kills a runaway Claude process
-2. **Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
+
+1. **Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
 
 ## Medium Priority (Workflow Completeness)
 
