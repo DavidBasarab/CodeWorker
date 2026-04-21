@@ -44,4 +44,4 @@
 
 
 
-I did two runs and they both did not work 
+The second one failed due to max turns.  Lets add a configuration for max turns make it default to 100.  

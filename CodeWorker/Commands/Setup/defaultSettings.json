@@ -12,7 +12,7 @@
 
   "Claude": {
     "Model": "claude-opus-4-6",
-    "MaxTurns": 10,
+    "MaxTurns": 100,
     "SkipPermissions": true,
     "OutputFormat": "json",
     "SystemPromptFile": "",
