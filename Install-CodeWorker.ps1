@@ -1,7 +1,14 @@
 param(
 	[string]$InstallPath = "C:\Tools\CodeWorker",
 	[string]$RepoUrl = "https://github.com/DavidBasarab/CodeWorker.git",
-	[string]$Branch = "main"
+	[string]$Branch = "main",
+	[switch]$CreateScheduledTask,
+	[string]$TaskName = "FatCatCodeWorker",
+	[string]$ScheduleStartTime = "20:00",
+	[string]$ScheduleEndTime = "07:00",
+	[int]$ScheduleIntervalMinutes = 30,
+	[string[]]$ScheduleDaysOfWeek = @(),
+	[string]$ScheduleTaskArguments = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,6 +36,98 @@ function Stop-RunningCodeWorker
 
 		$runningProcesses | Stop-Process -Force
 		Start-Sleep -Seconds 1
+	}
+}
+
+function Get-ScheduleDuration([string]$startTime, [string]$endTime)
+{
+	$start = [TimeSpan]::Parse($startTime)
+	$end = [TimeSpan]::Parse($endTime)
+
+	if ($end -le $start)
+	{
+		return [TimeSpan]::FromHours(24) - $start + $end
+	}
+
+	return $end - $start
+}
+
+function New-CodeWorkerScheduledTask
+{
+	param(
+		[string]$name,
+		[string]$exePath,
+		[string]$startTime,
+		[string]$endTime,
+		[int]$intervalMinutes,
+		[string[]]$daysOfWeek,
+		[string]$taskArguments
+	)
+
+	$duration = Get-ScheduleDuration -startTime $startTime -endTime $endTime
+	$startDateTime = [DateTime]::Today.Add([TimeSpan]::Parse($startTime))
+	$repetitionInterval = New-TimeSpan -Minutes $intervalMinutes
+
+	if ($daysOfWeek -and $daysOfWeek.Count -gt 0)
+	{
+		$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $daysOfWeek -At $startDateTime
+	}
+	else
+	{
+		$trigger = New-ScheduledTaskTrigger -Daily -At $startDateTime
+	}
+
+	$repetitionTrigger = New-ScheduledTaskTrigger -Once -At $startDateTime `
+		-RepetitionInterval $repetitionInterval `
+		-RepetitionDuration $duration
+
+	$trigger.Repetition = $repetitionTrigger.Repetition
+
+	$workingDirectory = Split-Path $exePath -Parent
+
+	if ([string]::IsNullOrWhiteSpace($taskArguments))
+	{
+		$action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $workingDirectory
+	}
+	else
+	{
+		$action = New-ScheduledTaskAction -Execute $exePath -Argument $taskArguments -WorkingDirectory $workingDirectory
+	}
+
+	$settings = New-ScheduledTaskSettingsSet `
+		-MultipleInstances IgnoreNew `
+		-AllowStartIfOnBatteries `
+		-DontStopIfGoingOnBatteries `
+		-StartWhenAvailable
+
+	$existingTask = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
+
+	if ($existingTask)
+	{
+		Write-Host "Replacing existing scheduled task '$name'..." -ForegroundColor Yellow
+
+		Unregister-ScheduledTask -TaskName $name -Confirm:$false
+	}
+
+	Register-ScheduledTask -TaskName $name `
+		-Trigger $trigger `
+		-Action $action `
+		-Settings $settings `
+		-User $env:USERNAME `
+		-RunLevel Limited | Out-Null
+
+	Write-Host "Scheduled task '$name' registered." -ForegroundColor Green
+	Write-Host "  Window:   $startTime - $endTime" -ForegroundColor Cyan
+	Write-Host "  Interval: every $intervalMinutes minute(s)" -ForegroundColor Cyan
+	Write-Host "  Policy:   skip if a previous run is still in progress" -ForegroundColor Cyan
+
+	if ($daysOfWeek -and $daysOfWeek.Count -gt 0)
+	{
+		Write-Host "  Days:     $($daysOfWeek -join ', ')" -ForegroundColor Cyan
+	}
+	else
+	{
+		Write-Host "  Days:     Daily" -ForegroundColor Cyan
 	}
 }
 
@@ -163,6 +262,20 @@ else
 {
 	Write-Host "FatCatCodeWorker.exe not found at $exePath" -ForegroundColor Red
 	exit 1
+}
+
+if ($CreateScheduledTask)
+{
+	Write-Step "Registering scheduled task"
+
+	New-CodeWorkerScheduledTask `
+		-name $TaskName `
+		-exePath $exePath `
+		-startTime $ScheduleStartTime `
+		-endTime $ScheduleEndTime `
+		-intervalMinutes $ScheduleIntervalMinutes `
+		-daysOfWeek $ScheduleDaysOfWeek `
+		-taskArguments $ScheduleTaskArguments
 }
 
 Write-Host ""
