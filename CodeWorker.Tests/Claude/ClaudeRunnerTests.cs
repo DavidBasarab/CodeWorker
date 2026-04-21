@@ -28,7 +28,7 @@ public class ClaudeRunnerTests
 			OutputLines = new List<string> { "Claude output line 1", "Claude output line 2" },
 		};
 
-		A.CallTo(() => runProcess.Run(A<ProcessSettings>.Ignored))
+		A.CallTo(() => runProcess.Run(A<ProcessSettings>._))
 			.ReturnsLazily(
 				(ProcessSettings settings) =>
 				{
@@ -122,7 +122,7 @@ public class ClaudeRunnerTests
 
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		A.CallTo(() => logger.Warning(A<string>.Ignored, A<int>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => logger.Warning(A<string>._, A<int>._)).MustNotHaveHappened();
 	}
 
 	[Fact]
@@ -297,7 +297,7 @@ public class ClaudeRunnerTests
 		A.CallTo(() =>
 				logger.Information(
 					"Claude settings: Model={Model}, MaxTurns={MaxTurns}, SkipPermissions={SkipPermissions}, OutputFormat={OutputFormat}, TimeoutMinutes={TimeoutMinutes}",
-					A<object[]>.Ignored
+					A<object[]>._
 				)
 			)
 			.MustHaveHappenedOnceExactly();

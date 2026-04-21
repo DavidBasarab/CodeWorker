@@ -12,7 +12,11 @@ public class TaskSettings
 
 	public string BlockedFolder { get; set; }
 
+	public string FailedFolder { get; set; }
+
 	public bool StopOnBlocked { get; set; }
+
+	public bool StopOnFailed { get; set; }
 
 	public bool RunPlanningPhase { get; set; }
 }

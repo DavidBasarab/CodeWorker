@@ -1,7 +1,4 @@
-using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
-using FatCat.CodeWorker.Git;
-using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
 using Serilog;
 
@@ -11,36 +8,28 @@ public class ProcessRepositoryTests
 {
 	private readonly IValidateRepository validateRepository;
 	private readonly ILoadRepoSettings loadRepoSettings;
-	private readonly IDiscoverTasks discoverTasks;
-	private readonly IMoveTask moveTask;
-	private readonly IRunClaude runClaude;
-	private readonly ILogTaskResult logTaskResult;
-	private readonly ICommitChanges commitChanges;
-	private readonly IPushChanges pushChanges;
-	private readonly IGenerateBlockedExplanation generateBlockedExplanation;
+	private readonly IBuildTaskFolders buildTaskFolders;
 	private readonly ICollectReferenceFiles collectReferenceFiles;
+	private readonly IDiscoverTasks discoverTasks;
+	private readonly IProcessTask processTask;
 	private readonly ILogger logger;
 	private readonly ProcessRepository processRepository;
 	private readonly RepositorySettings repositorySettings;
 	private readonly ClaudeSettings globalClaudeSettings;
+	private readonly TaskFolders taskFolders;
 	private RepoSettings repoSettings;
-	private ProcessResult claudeResult;
-	private ProcessResult commitResult;
-	private ProcessResult pushResult;
 	private RepositoryValidationResult validationResult;
+	private TaskProcessingDecision nextDecision;
+	private List<ReferenceFile> referenceFiles;
 
 	public ProcessRepositoryTests()
 	{
 		validateRepository = A.Fake<IValidateRepository>();
 		loadRepoSettings = A.Fake<ILoadRepoSettings>();
-		discoverTasks = A.Fake<IDiscoverTasks>();
-		moveTask = A.Fake<IMoveTask>();
-		runClaude = A.Fake<IRunClaude>();
-		logTaskResult = A.Fake<ILogTaskResult>();
-		generateBlockedExplanation = A.Fake<IGenerateBlockedExplanation>();
+		buildTaskFolders = A.Fake<IBuildTaskFolders>();
 		collectReferenceFiles = A.Fake<ICollectReferenceFiles>();
-		commitChanges = A.Fake<ICommitChanges>();
-		pushChanges = A.Fake<IPushChanges>();
+		discoverTasks = A.Fake<IDiscoverTasks>();
+		processTask = A.Fake<IProcessTask>();
 		logger = A.Fake<ILogger>();
 
 		repositorySettings = new RepositorySettings { Path = @"C:\Projects\my-api", Enabled = true };
@@ -56,83 +45,74 @@ public class ProcessRepositoryTests
 
 		validationResult = new RepositoryValidationResult { IsValid = true };
 
-		A.CallTo(() => validateRepository.Validate(A<RepositorySettings>.Ignored)).ReturnsLazily(() => validationResult);
-
 		repoSettings = new RepoSettings
 		{
 			Enabled = true,
 			LogResults = true,
-			Git = new GitSettings
-			{
-				CommitAfterEachTask = true,
-				PushAfterEachTask = true,
-				CommitMessagePrefix = "🤖",
-			},
+			Git = new GitSettings(),
 			Tasks = new TaskSettings
 			{
 				TodoFolder = "tasks/todo",
 				DoneFolder = "tasks/done",
 				PendingFolder = "tasks/pending",
 				BlockedFolder = "tasks/blocked",
+				FailedFolder = "tasks/failed",
 				ReferenceFolder = "tasks/reference",
-				StopOnBlocked = true,
 			},
 		};
 
-		claudeResult = new ProcessResult
+		taskFolders = new TaskFolders
 		{
-			ExitCode = 0,
-			OutputLines = new List<string> { "Done" },
-			ErrorLines = new List<string>(),
+			Todo = @"C:\Projects\my-api\tasks\todo",
+			Pending = @"C:\Projects\my-api\tasks\pending",
+			Done = @"C:\Projects\my-api\tasks\done",
+			Blocked = @"C:\Projects\my-api\tasks\blocked",
+			Failed = @"C:\Projects\my-api\tasks\failed",
+			Reference = @"C:\Projects\my-api\tasks\reference",
 		};
 
-		commitResult = new ProcessResult
-		{
-			ExitCode = 0,
-			OutputLines = new List<string>(),
-			ErrorLines = new List<string>(),
-		};
+		referenceFiles = new List<ReferenceFile>();
+		nextDecision = TaskProcessingDecision.Continue;
 
-		pushResult = new ProcessResult
-		{
-			ExitCode = 0,
-			OutputLines = new List<string>(),
-			ErrorLines = new List<string>(),
-		};
-
-		A.CallTo(() => loadRepoSettings.Load(A<string>.Ignored)).Returns(Task.FromResult(repoSettings));
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored)).Returns(new List<string>());
-		A.CallTo(() => collectReferenceFiles.Collect(A<string>.Ignored)).Returns(Task.FromResult(new List<ReferenceFile>()));
-		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
-			.Returns(Task.FromResult(claudeResult));
-		A.CallTo(() =>
-				logTaskResult.Log(
-					A<string>.Ignored,
-					A<string>.Ignored,
-					A<ProcessResult>.Ignored,
-					A<List<ReferenceFile>>.Ignored
-				)
-			)
-			.Returns(Task.CompletedTask);
-		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
-			.Returns(Task.CompletedTask);
-		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored))
-			.ReturnsLazily(() => Task.FromResult(commitResult));
-		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).ReturnsLazily(() => Task.FromResult(pushResult));
+		A.CallTo(() => validateRepository.Validate(A<RepositorySettings>._)).ReturnsLazily(() => validationResult);
+		A.CallTo(() => loadRepoSettings.Load(A<string>._)).ReturnsLazily(() => Task.FromResult(repoSettings));
+		A.CallTo(() => buildTaskFolders.Build(A<string>._, A<TaskSettings>._)).Returns(taskFolders);
+		A.CallTo(() => collectReferenceFiles.Collect(A<string>._)).ReturnsLazily(() => Task.FromResult(referenceFiles));
+		A.CallTo(() => discoverTasks.Discover(A<string>._)).Returns(new List<string>());
+		A.CallTo(() => processTask.Run(A<TaskExecutionContext>._, A<string>._))
+			.ReturnsLazily(() => Task.FromResult(nextDecision));
 
 		processRepository = new ProcessRepository(
 			validateRepository,
 			loadRepoSettings,
-			discoverTasks,
-			moveTask,
-			runClaude,
-			logTaskResult,
-			generateBlockedExplanation,
+			buildTaskFolders,
 			collectReferenceFiles,
-			commitChanges,
-			pushChanges,
+			discoverTasks,
+			processTask,
 			logger
 		);
+	}
+
+	[Fact]
+	public async Task ValidateRepositoryBeforeProcessing()
+	{
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => validateRepository.Validate(repositorySettings)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task SkipRepositoryWhenValidationFails()
+	{
+		validationResult = new RepositoryValidationResult
+		{
+			IsValid = false,
+			Errors = new List<string> { "Directory not found" },
+		};
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => loadRepoSettings.Load(A<string>._)).MustNotHaveHappened();
 	}
 
 	[Fact]
@@ -150,7 +130,23 @@ public class ProcessRepositoryTests
 
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => discoverTasks.Discover(A<string>._)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task BuildTaskFoldersFromRepoSettings()
+	{
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => buildTaskFolders.Build(@"C:\Projects\my-api", repoSettings.Tasks)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task CollectReferenceFilesFromReferenceFolder()
+	{
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => collectReferenceFiles.Collect(taskFolders.Reference)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -158,507 +154,108 @@ public class ProcessRepositoryTests
 	{
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
-		A.CallTo(() => discoverTasks.Discover(@"C:\Projects\my-api\tasks/todo")).MustHaveHappenedOnceExactly();
+		A.CallTo(() => discoverTasks.Discover(taskFolders.Todo)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task MoveTaskFromTodoToPending()
+	public async Task ProcessEachDiscoveredTask()
 	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => moveTask.Move(@"C:\Projects\my-api\tasks\todo\01_MyTask.md", @"C:\Projects\my-api\tasks/pending"))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task RunClaudeWithPendingFilePath()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() =>
-				runClaude.Run(
-					@"C:\Projects\my-api\tasks/pending\01_MyTask.md",
-					A<ClaudeSettings>.Ignored,
-					A<List<ReferenceFile>>.Ignored
-				)
-			)
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task LogResultWhenLogResultsIsEnabled()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", claudeResult, A<List<ReferenceFile>>.Ignored))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task SkipLoggingResultWhenLogResultsIsDisabled()
-	{
-		repoSettings.LogResults = false;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() =>
-				logTaskResult.Log(
-					A<string>.Ignored,
-					A<string>.Ignored,
-					A<ProcessResult>.Ignored,
-					A<List<ReferenceFile>>.Ignored
-				)
-			)
-			.MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task MoveTaskToDoneOnSuccess()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => moveTask.Move(@"C:\Projects\my-api\tasks/pending\01_MyTask.md", @"C:\Projects\my-api\tasks/done"))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task MoveTaskToBlockedOnFailure()
-	{
-		claudeResult.ExitCode = 1;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => moveTask.Move(@"C:\Projects\my-api\tasks/pending\01_MyTask.md", @"C:\Projects\my-api\tasks/blocked"))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task StopProcessingWhenStopOnBlockedIsTrueAndTaskFails()
-	{
-		claudeResult.ExitCode = 1;
-		repoSettings.Tasks.StopOnBlocked = true;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+		A.CallTo(() => discoverTasks.Discover(A<string>._))
 			.Returns(
 				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
 			);
 
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
-		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
+		A.CallTo(() => processTask.Run(A<TaskExecutionContext>._, @"C:\Projects\my-api\tasks\todo\01_First.md"))
+			.MustHaveHappenedOnceExactly();
+		A.CallTo(() => processTask.Run(A<TaskExecutionContext>._, @"C:\Projects\my-api\tasks\todo\02_Second.md"))
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task ContinueProcessingWhenStopOnBlockedIsFalseAndTaskFails()
+	public async Task StopProcessingWhenDecisionIsStop()
 	{
-		claudeResult.ExitCode = 1;
-		repoSettings.Tasks.StopOnBlocked = false;
+		nextDecision = TaskProcessingDecision.Stop;
 
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+		A.CallTo(() => discoverTasks.Discover(A<string>._))
 			.Returns(
 				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
 			);
 
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
-		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
-			.MustHaveHappenedTwiceExactly();
+		A.CallTo(() => processTask.Run(A<TaskExecutionContext>._, A<string>._)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task ProcessMultipleTasksInOrder()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(
-				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
-			);
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() =>
-				runClaude.Run(A<string>.That.Contains("01_First.md"), A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored)
-			)
-			.MustHaveHappenedOnceExactly();
-		A.CallTo(() =>
-				runClaude.Run(
-					A<string>.That.Contains("02_Second.md"),
-					A<ClaudeSettings>.Ignored,
-					A<List<ReferenceFile>>.Ignored
-				)
-			)
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task LogWhenTaskIsStarting()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => logger.Information(A<string>.That.Contains("Starting task"), A<string>.That.Contains("01_MyTask.md")))
-			.MustHaveHappened();
-	}
-
-	[Fact]
-	public async Task CommitAfterSuccessfulTaskWhenConfigured()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => commitChanges.Commit(@"C:\Projects\my-api", A<string>.Ignored)).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task UseCorrectCommitMessageFormat()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, "🤖 01_MyTask")).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task NotCommitWhenCommitAfterEachTaskIsFalse()
-	{
-		repoSettings.Git.CommitAfterEachTask = false;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task NotCommitWhenTaskIsBlocked()
-	{
-		claudeResult.ExitCode = 1;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task StopRepositoryProcessingWhenCommitFails()
-	{
-		commitResult.ExitCode = 1;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(
-				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
-			);
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task PushAfterSuccessfulTaskWhenConfigured()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => pushChanges.Push(@"C:\Projects\my-api")).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task NotPushWhenPushAfterEachTaskIsFalse()
-	{
-		repoSettings.Git.PushAfterEachTask = false;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task NotPushWhenTaskIsBlocked()
-	{
-		claudeResult.ExitCode = 1;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task StopRepositoryProcessingWhenPushFails()
-	{
-		pushResult.ExitCode = 1;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(
-				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
-			);
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task NotCommitWhenGitSettingsIsNull()
-	{
-		repoSettings.Git = null;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task NotPushWhenGitSettingsIsNull()
-	{
-		repoSettings.Git = null;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task ValidateRepositoryBeforeProcessing()
-	{
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => validateRepository.Validate(repositorySettings)).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task SkipRepositoryWhenValidationFails()
-	{
-		validationResult = new RepositoryValidationResult
-		{
-			IsValid = false,
-			Errors = new List<string> { "Directory not found: C:\\Projects\\my-api\\tasks" },
-		};
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => loadRepoSettings.Load(A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task NotDiscoverTasksWhenValidationFails()
-	{
-		validationResult = new RepositoryValidationResult
-		{
-			IsValid = false,
-			Errors = new List<string> { "Directory not found: C:\\Projects\\my-api\\tasks" },
-		};
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task GenerateBlockedExplanationWhenTaskIsBlocked()
-	{
-		claudeResult.ExitCode = 1;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks/blocked", "01_MyTask.md", claudeResult))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task NotGenerateBlockedExplanationWhenTaskSucceeds()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
-			.MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task PassMergedClaudeSettingsToClaudeRunner()
+	public async Task PassMergedClaudeSettingsInContext()
 	{
 		repoSettings.Claude = new ClaudeSettings { Model = "claude-sonnet-4-6" };
 
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+		A.CallTo(() => discoverTasks.Discover(A<string>._))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
 
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
 		A.CallTo(() =>
-				runClaude.Run(
-					A<string>.Ignored,
-					A<ClaudeSettings>.That.Matches(c => c.Model == "claude-sonnet-4-6" && c.MaxTurns == 10),
-					A<List<ReferenceFile>>.Ignored
+				processTask.Run(
+					A<TaskExecutionContext>.That.Matches(c =>
+						c.ClaudeSettings.Model == "claude-sonnet-4-6" && c.ClaudeSettings.MaxTurns == 10
+					),
+					A<string>._
 				)
 			)
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task UseGlobalSettingsWhenRepoClaudeSettingsIsNull()
+	public async Task UseGlobalClaudeSettingsWhenRepoClaudeIsNull()
 	{
 		repoSettings.Claude = null;
 
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+		A.CallTo(() => discoverTasks.Discover(A<string>._))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
 
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
 		A.CallTo(() =>
-				runClaude.Run(
-					A<string>.Ignored,
-					A<ClaudeSettings>.That.Matches(c => c.Model == "claude-opus-4-6" && c.MaxTurns == 10),
-					A<List<ReferenceFile>>.Ignored
+				processTask.Run(
+					A<TaskExecutionContext>.That.Matches(c => c.ClaudeSettings.Model == "claude-opus-4-6"),
+					A<string>._
 				)
 			)
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task GenerateBlockedExplanationBeforeStopOnBlocked()
+	public async Task PassReferenceFilesInContext()
 	{
-		claudeResult.ExitCode = 1;
-		repoSettings.Tasks.StopOnBlocked = true;
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task CollectReferenceFilesFromConfiguredFolder()
-	{
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() => collectReferenceFiles.Collect(@"C:\Projects\my-api\tasks/reference")).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task PassReferenceFilesToClaudeRunner()
-	{
-		var references = new List<ReferenceFile>
+		referenceFiles = new List<ReferenceFile>
 		{
 			new() { Name = "context.md", Content = "context content" },
 		};
 
-		A.CallTo(() => collectReferenceFiles.Collect(A<string>.Ignored)).Returns(Task.FromResult(references));
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+		A.CallTo(() => discoverTasks.Discover(A<string>._))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
 
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
-		A.CallTo(() =>
-				runClaude.Run(
-					A<string>.Ignored,
-					A<ClaudeSettings>.Ignored,
-					A<List<ReferenceFile>>.That.Matches(r => r.Count == 1)
-				)
-			)
+		A.CallTo(() => processTask.Run(A<TaskExecutionContext>.That.Matches(c => c.ReferenceFiles.Count == 1), A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task PassReferenceFilesToLogTaskResult()
+	public async Task LogReferenceFileNamesWhenFilesArePresent()
 	{
-		var references = new List<ReferenceFile>
-		{
-			new() { Name = "context.md", Content = "context content" },
-		};
-
-		A.CallTo(() => collectReferenceFiles.Collect(A<string>.Ignored)).Returns(Task.FromResult(references));
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
-		await processRepository.Process(repositorySettings, globalClaudeSettings);
-
-		A.CallTo(() =>
-				logTaskResult.Log(
-					A<string>.Ignored,
-					A<string>.Ignored,
-					A<ProcessResult>.Ignored,
-					A<List<ReferenceFile>>.That.Matches(r => r.Count == 1)
-				)
-			)
-			.MustHaveHappened();
-	}
-
-	[Fact]
-	public async Task LogReferenceFileNames()
-	{
-		var references = new List<ReferenceFile>
+		referenceFiles = new List<ReferenceFile>
 		{
 			new() { Name = "context.md", Content = "content" },
 			new() { Name = "schema.md", Content = "schema" },
 		};
 
-		A.CallTo(() => collectReferenceFiles.Collect(A<string>.Ignored)).Returns(Task.FromResult(references));
-
-		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
-			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
-
 		await processRepository.Process(repositorySettings, globalClaudeSettings);
 
-		A.CallTo(() => logger.Information(A<string>.That.Contains("reference"), A<int>.Ignored, A<string>.Ignored))
-			.MustHaveHappened();
+		A.CallTo(() => logger.Information(A<string>.That.Contains("reference"), A<int>._, A<string>._)).MustHaveHappened();
 	}
 }

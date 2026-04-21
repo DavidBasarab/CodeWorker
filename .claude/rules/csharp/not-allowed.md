@@ -31,6 +31,9 @@ These are hard stops. Do not do any of the following under any circumstances.
 - Do NOT swallow exceptions silently
 - Do NOT use `DevLog` in permanent code — development debugging only, remove before merge
 
+## Testing
+- Do NOT use `A<T>.Ignored` in FakeItEasy argument matchers — always use `A<T>._`
+
 ## Formatting
 - Do NOT manually fight CSharpier formatting — it is the final authority
 - Do NOT suppress ReSharper warnings without a comment explaining why

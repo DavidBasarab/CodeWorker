@@ -55,7 +55,21 @@ public class RunProcess(ILogger logger) : IRunProcess
 			result.ErrorLines.Add(args.Data);
 		};
 
-		process.Start();
+		try
+		{
+			process.Start();
+		}
+		catch (Exception exception)
+		{
+			logger.Error(exception, "Failed to start process {FileName}", settings.FileName);
+
+			result.FailedToStart = true;
+			result.ExitCode = -1;
+			result.ErrorLines.Add($"Failed to start process {settings.FileName}: {exception.Message}");
+
+			return result;
+		}
+
 		process.BeginOutputReadLine();
 		process.BeginErrorReadLine();
 
@@ -75,6 +89,7 @@ public class RunProcess(ILogger logger) : IRunProcess
 				);
 				process.Kill(entireProcessTree: true);
 
+				result.TimedOut = true;
 				result.ExitCode = -1;
 				result.ErrorLines.Add($"Process timed out after {settings.TimeoutMilliseconds / 60000} minutes");
 

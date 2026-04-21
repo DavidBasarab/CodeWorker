@@ -1,6 +1,6 @@
 ## Medium Priority (Workflow Completeness)
 
-6. **Failed vs Blocked distinction** — README defines both states but only Blocked (non-zero exit) is implemented. No separation between infrastructure failures and logical blockers
+6. **Failed vs Blocked distinction** — README defines both states but only Blocked (non-zero exit) is implemented. No separation between infrastructure failures and logical block `ers
 7. **Task completion validation** — Only checks exit code. No verification that build succeeds, tests pass, or changes were actually produced
 8. **Branch switching** — `Branch` config exists but no logic to check out a specific branch before processing
 9. **System prompt file** — `SystemPromptFile` config exists but is never read or passed to Claude

@@ -43,21 +43,16 @@ public class GenerateBlockedExplanation(IFileSystemTools fileSystemTools, ILogge
 	{
 		var allText = string.Join(" ", result.OutputLines.Concat(result.ErrorLines)).ToLowerInvariant();
 
-		if (allText.Contains("token limit"))
+		if (allText.Contains("missing") || allText.Contains("not found") || allText.Contains("does not exist"))
 		{
-			return "Increase token limit or simplify the task";
+			return "Resolve the missing resource referenced by the task, then re-queue";
 		}
 
-		if (allText.Contains("authentication") || allText.Contains("unauthorized"))
+		if (allText.Contains("contradictory") || allText.Contains("conflict") || allText.Contains("ambiguous"))
 		{
-			return "Check API key and authentication configuration";
+			return "Clarify the task instructions to remove ambiguity, then re-queue";
 		}
 
-		if (allText.Contains("timeout"))
-		{
-			return "Increase timeout or break the task into smaller pieces";
-		}
-
-		return "Review the error output above and address the root cause";
+		return "Review the blocker reported by Claude and adjust the task before re-queueing";
 	}
 }

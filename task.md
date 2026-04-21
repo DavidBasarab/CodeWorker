@@ -1,12 +1,15 @@
 
 ## Feature Context
 
-**Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
+When `FatCatCodeWorker setup` is done the repositories that is added to the track repository list.
 
-## Tasks
+## Task
 
-- [ ] Create a way to pass reference files
-- [ ] Log what files were used for each task.
+- [ ] on `setup` add the repository it is run in to the repository the app is tracking
+- [ ] Add a `untrack` method that will remove that repository from the app that it is tracking
+- [ ] Add a `list` command line parameter that will list all the repository that are being tracked
+- [ ] On the `untrack` if no other parameter is given it should remove the repository it is run in else it should take a name form the list and remove it.
+- [ ] Add a method called `track` that will run in a repository that is already setup or by name that will add it to the tracked list
 
 ## Required Steps
 

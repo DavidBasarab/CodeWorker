@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Commands.Setup;
+using FatCat.CodeWorker.Commands.Track;
 using FatCat.Toolkit;
 using Serilog;
 
@@ -7,6 +8,7 @@ namespace Testing.FatCat.CodeWorker.Commands.Setup;
 public class SetupRepositoryTests
 {
 	private readonly IFileSystemTools fileSystemTools;
+	private readonly ITrackRepository trackRepository;
 	private readonly ILogger logger;
 	private readonly SetupRepository setupRepository;
 	private readonly string repositoryPath = @"C:\Projects\my-api";
@@ -14,9 +16,18 @@ public class SetupRepositoryTests
 	public SetupRepositoryTests()
 	{
 		fileSystemTools = A.Fake<IFileSystemTools>();
+		trackRepository = A.Fake<ITrackRepository>();
 		logger = A.Fake<ILogger>();
 
-		setupRepository = new SetupRepository(fileSystemTools, logger);
+		setupRepository = new SetupRepository(fileSystemTools, trackRepository, logger);
+	}
+
+	[Fact]
+	public async Task TrackTheRepositoryAfterSetup()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => trackRepository.Track(repositoryPath)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -84,7 +95,7 @@ public class SetupRepositoryTests
 	{
 		var capturedContent = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("README.md"), A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("README.md"), A<string>._))
 			.Invokes((string path, string text) => capturedContent = text);
 
 		await setupRepository.Setup(repositoryPath);
@@ -110,11 +121,28 @@ public class SetupRepositoryTests
 	}
 
 	[Fact]
+	public async Task CreateTheFailedDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\failed")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteGitKeepToFailedDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\failed\.gitkeep", string.Empty))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
 	public async Task WriteSettingsJsonToTasksDirectory()
 	{
 		await setupRepository.Setup(repositoryPath);
 
-		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\settings.json", A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\settings.json", A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -123,7 +151,7 @@ public class SetupRepositoryTests
 	{
 		var capturedContent = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("settings.json"), A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("settings.json"), A<string>._))
 			.Invokes((string path, string text) => capturedContent = text);
 
 		await setupRepository.Setup(repositoryPath);

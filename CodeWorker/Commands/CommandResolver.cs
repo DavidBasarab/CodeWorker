@@ -1,5 +1,9 @@
+using FatCat.CodeWorker.Commands.Info;
+using FatCat.CodeWorker.Commands.List;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Commands.Setup;
+using FatCat.CodeWorker.Commands.Track;
+using FatCat.CodeWorker.Commands.Untrack;
 
 namespace FatCat.CodeWorker.Commands;
 
@@ -8,7 +12,14 @@ public interface IResolveCommand
 	ICommand Resolve(string[] args);
 }
 
-public class CommandResolver(IRunSetupCommand setupCommand, IRunTaskCommand runTaskCommand) : IResolveCommand
+public class CommandResolver(
+	IRunSetupCommand setupCommand,
+	IRunTaskCommand runTaskCommand,
+	IRunTrackCommand trackCommand,
+	IRunUntrackCommand untrackCommand,
+	IRunListCommand listCommand,
+	IRunInfoCommand infoCommand
+) : IResolveCommand
 {
 	public ICommand Resolve(string[] args)
 	{
@@ -22,6 +33,26 @@ public class CommandResolver(IRunSetupCommand setupCommand, IRunTaskCommand runT
 		if (string.Equals(commandName, "setup", StringComparison.OrdinalIgnoreCase))
 		{
 			return setupCommand;
+		}
+
+		if (string.Equals(commandName, "track", StringComparison.OrdinalIgnoreCase))
+		{
+			return trackCommand;
+		}
+
+		if (string.Equals(commandName, "untrack", StringComparison.OrdinalIgnoreCase))
+		{
+			return untrackCommand;
+		}
+
+		if (string.Equals(commandName, "list", StringComparison.OrdinalIgnoreCase))
+		{
+			return listCommand;
+		}
+
+		if (string.Equals(commandName, "info", StringComparison.OrdinalIgnoreCase))
+		{
+			return infoCommand;
 		}
 
 		return runTaskCommand;
