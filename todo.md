@@ -1,11 +1,3 @@
-## High Priority (Core Workflow Gaps)
-
-1. **Repository validation** — No checks that required folders exist or that the repo is in a clean git state before processing
-2. **Blocked task explanation files** — Tasks move to `blocked/` but no structured Markdown explanation (task name, timestamp, reason, recommended fix) is generated
-3. **Claude CLI config passthrough** — Settings define `Model`, `MaxTurns`, `TimeoutMinutes`, `AllowedTools`, `OutputFormat`, but `ClaudeRunner` only uses `-p --input-file`. Most config options aren't passed as CLI args
-4. **Timeout enforcement** — `TimeoutMinutes` exists in config but nothing kills a runaway Claude process
-5. **Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
-
 ## Medium Priority (Workflow Completeness)
 
 6. **Failed vs Blocked distinction** — README defines both states but only Blocked (non-zero exit) is implemented. No separation between infrastructure failures and logical blockers

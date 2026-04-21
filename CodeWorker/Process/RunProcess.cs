@@ -59,7 +59,32 @@ public class RunProcess(ILogger logger) : IRunProcess
 		process.BeginOutputReadLine();
 		process.BeginErrorReadLine();
 
-		await process.WaitForExitAsync();
+		if (settings.TimeoutMilliseconds > 0)
+		{
+			using var cancellationTokenSource = new CancellationTokenSource(settings.TimeoutMilliseconds);
+
+			try
+			{
+				await process.WaitForExitAsync(cancellationTokenSource.Token);
+			}
+			catch (OperationCanceledException)
+			{
+				logger.Error(
+					"Process timed out after {TimeoutMinutes} minutes, killing process",
+					settings.TimeoutMilliseconds / 60000
+				);
+				process.Kill(entireProcessTree: true);
+
+				result.ExitCode = -1;
+				result.ErrorLines.Add($"Process timed out after {settings.TimeoutMilliseconds / 60000} minutes");
+
+				return result;
+			}
+		}
+		else
+		{
+			await process.WaitForExitAsync();
+		}
 
 		result.ExitCode = process.ExitCode;
 

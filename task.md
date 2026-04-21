@@ -1,14 +1,12 @@
 
 ## Feature Context
 
-Validate repository before doing any work.
+**Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
 
 ## Tasks
 
-- [ ] Add validation interface
-- [ ] Call validation before doing any work
-- [ ] if validation fails then make the repository as broken and the user will have to clear
-- [ ] If one repository is broken the others that are not broken can be run
+- [ ] Create a way to pass reference files
+- [ ] Log what files were used for each task.
 
 ## Required Steps
 
@@ -28,9 +26,7 @@ Validate repository before doing any work.
 
 ## References
 
-- Read AI_CONTEXT.md before doing anything.
-- <!-- Related issue, PR, or ticket -->
-- <!-- Relevant existing classes or files Claude should read first -->
+- Read AI_CONTEXT.md before doing anything. 
 
 ## Notes
 

@@ -7,7 +7,7 @@ namespace FatCat.CodeWorker.Commands.Run;
 
 public interface IProcessRepository
 {
-	Task Process(RepositorySettings repository);
+	Task Process(RepositorySettings repository, ClaudeSettings globalClaudeSettings);
 }
 
 public class ProcessRepository(
@@ -17,12 +17,14 @@ public class ProcessRepository(
 	IMoveTask moveTask,
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
+	IGenerateBlockedExplanation generateBlockedExplanation,
+	ICollectReferenceFiles collectReferenceFiles,
 	ICommitChanges commitChanges,
 	IPushChanges pushChanges,
 	ILogger logger
 ) : IProcessRepository
 {
-	public async Task Process(RepositorySettings repository)
+	public async Task Process(RepositorySettings repository, ClaudeSettings globalClaudeSettings)
 	{
 		var validationResult = validateRepository.Validate(repository);
 
@@ -46,10 +48,22 @@ public class ProcessRepository(
 			return;
 		}
 
+		var effectiveClaudeSettings = globalClaudeSettings.MergeWith(repoSettings.Claude);
+
 		var todoFolder = Path.Combine(repository.Path, repoSettings.Tasks.TodoFolder);
 		var pendingFolder = Path.Combine(repository.Path, repoSettings.Tasks.PendingFolder);
 		var doneFolder = Path.Combine(repository.Path, repoSettings.Tasks.DoneFolder);
 		var blockedFolder = Path.Combine(repository.Path, repoSettings.Tasks.BlockedFolder);
+		var referenceFolder = Path.Combine(repository.Path, repoSettings.Tasks.ReferenceFolder);
+
+		var referenceFiles = await collectReferenceFiles.Collect(referenceFolder);
+
+		if (referenceFiles.Count > 0)
+		{
+			var fileNames = string.Join(", ", referenceFiles.Select(f => f.Name));
+
+			logger.Information("Including {Count} reference file(s): {FileNames}", referenceFiles.Count, fileNames);
+		}
 
 		var taskFiles = discoverTasks.Discover(todoFolder);
 
@@ -62,11 +76,11 @@ public class ProcessRepository(
 
 			moveTask.Move(taskFile, pendingFolder);
 
-			var result = await runClaude.Run(pendingFilePath);
+			var result = await runClaude.Run(pendingFilePath, effectiveClaudeSettings, referenceFiles);
 
 			if (repoSettings.LogResults)
 			{
-				await logTaskResult.Log(repository.Path, taskName, result);
+				await logTaskResult.Log(repository.Path, taskName, result, referenceFiles);
 			}
 
 			var isBlocked = result.ExitCode != 0;
@@ -74,6 +88,7 @@ public class ProcessRepository(
 			if (isBlocked)
 			{
 				moveTask.Move(pendingFilePath, blockedFolder);
+				await generateBlockedExplanation.Generate(blockedFolder, taskName, result);
 
 				if (repoSettings.Tasks.StopOnBlocked)
 				{
@@ -98,7 +113,7 @@ public class ProcessRepository(
 
 					if (repoSettings.LogResults)
 					{
-						await logTaskResult.Log(repository.Path, taskName, commitResult);
+						await logTaskResult.Log(repository.Path, taskName, commitResult, referenceFiles);
 					}
 
 					if (commitResult.ExitCode != 0)
@@ -115,7 +130,7 @@ public class ProcessRepository(
 
 					if (repoSettings.LogResults)
 					{
-						await logTaskResult.Log(repository.Path, taskName, pushResult);
+						await logTaskResult.Log(repository.Path, taskName, pushResult, referenceFiles);
 					}
 
 					if (pushResult.ExitCode != 0)
