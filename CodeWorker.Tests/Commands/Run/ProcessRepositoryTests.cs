@@ -18,6 +18,8 @@ public class ProcessRepositoryTests
 	private readonly ICommitChanges commitChanges;
 	private readonly IPushChanges pushChanges;
 	private readonly IGenerateBlockedExplanation generateBlockedExplanation;
+	private readonly IGenerateFailedExplanation generateFailedExplanation;
+	private readonly IClassifyTaskResult classifyTaskResult;
 	private readonly ICollectReferenceFiles collectReferenceFiles;
 	private readonly ILogger logger;
 	private readonly ProcessRepository processRepository;
@@ -28,6 +30,7 @@ public class ProcessRepositoryTests
 	private ProcessResult commitResult;
 	private ProcessResult pushResult;
 	private RepositoryValidationResult validationResult;
+	private TaskOutcome currentOutcome;
 
 	public ProcessRepositoryTests()
 	{
@@ -38,6 +41,8 @@ public class ProcessRepositoryTests
 		runClaude = A.Fake<IRunClaude>();
 		logTaskResult = A.Fake<ILogTaskResult>();
 		generateBlockedExplanation = A.Fake<IGenerateBlockedExplanation>();
+		generateFailedExplanation = A.Fake<IGenerateFailedExplanation>();
+		classifyTaskResult = A.Fake<IClassifyTaskResult>();
 		collectReferenceFiles = A.Fake<ICollectReferenceFiles>();
 		commitChanges = A.Fake<ICommitChanges>();
 		pushChanges = A.Fake<IPushChanges>();
@@ -74,10 +79,14 @@ public class ProcessRepositoryTests
 				DoneFolder = "tasks/done",
 				PendingFolder = "tasks/pending",
 				BlockedFolder = "tasks/blocked",
+				FailedFolder = "tasks/failed",
 				ReferenceFolder = "tasks/reference",
 				StopOnBlocked = true,
+				StopOnFailed = true,
 			},
 		};
+
+		currentOutcome = TaskOutcome.Done;
 
 		claudeResult = new ProcessResult
 		{
@@ -116,6 +125,9 @@ public class ProcessRepositoryTests
 			.Returns(Task.CompletedTask);
 		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
 			.Returns(Task.CompletedTask);
+		A.CallTo(() => generateFailedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
+			.Returns(Task.CompletedTask);
+		A.CallTo(() => classifyTaskResult.Classify(A<ProcessResult>.Ignored)).ReturnsLazily(() => currentOutcome);
 		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored))
 			.ReturnsLazily(() => Task.FromResult(commitResult));
 		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).ReturnsLazily(() => Task.FromResult(pushResult));
@@ -128,6 +140,8 @@ public class ProcessRepositoryTests
 			runClaude,
 			logTaskResult,
 			generateBlockedExplanation,
+			generateFailedExplanation,
+			classifyTaskResult,
 			collectReferenceFiles,
 			commitChanges,
 			pushChanges,
@@ -239,7 +253,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task MoveTaskToBlockedOnFailure()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
@@ -253,7 +267,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task StopProcessingWhenStopOnBlockedIsTrueAndTaskFails()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 		repoSettings.Tasks.StopOnBlocked = true;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
@@ -270,7 +284,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task ContinueProcessingWhenStopOnBlockedIsFalseAndTaskFails()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 		repoSettings.Tasks.StopOnBlocked = false;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
@@ -358,7 +372,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task NotCommitWhenTaskIsBlocked()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
@@ -411,7 +425,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task NotPushWhenTaskIsBlocked()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
@@ -502,7 +516,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task GenerateBlockedExplanationWhenTaskIsBlocked()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
 			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
@@ -568,7 +582,7 @@ public class ProcessRepositoryTests
 	[Fact]
 	public async Task GenerateBlockedExplanationBeforeStopOnBlocked()
 	{
-		claudeResult.ExitCode = 1;
+		currentOutcome = TaskOutcome.Blocked;
 		repoSettings.Tasks.StopOnBlocked = true;
 
 		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
@@ -660,5 +674,130 @@ public class ProcessRepositoryTests
 
 		A.CallTo(() => logger.Information(A<string>.That.Contains("reference"), A<int>.Ignored, A<string>.Ignored))
 			.MustHaveHappened();
+	}
+
+	[Fact]
+	public async Task MoveTaskToFailedWhenClassificationIsFailed()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => moveTask.Move(@"C:\Projects\my-api\tasks/pending\01_MyTask.md", @"C:\Projects\my-api\tasks/failed"))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task GenerateFailedExplanationWhenClassificationIsFailed()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => generateFailedExplanation.Generate(@"C:\Projects\my-api\tasks/failed", "01_MyTask.md", claudeResult))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task NotGenerateFailedExplanationWhenTaskSucceeds()
+	{
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => generateFailedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
+			.MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotGenerateBlockedExplanationWhenClassificationIsFailed()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => generateBlockedExplanation.Generate(A<string>.Ignored, A<string>.Ignored, A<ProcessResult>.Ignored))
+			.MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task StopProcessingWhenStopOnFailedIsTrueAndTaskFails()
+	{
+		currentOutcome = TaskOutcome.Failed;
+		repoSettings.Tasks.StopOnFailed = true;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(
+				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
+			);
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task ContinueProcessingWhenStopOnFailedIsFalseAndTaskFails()
+	{
+		currentOutcome = TaskOutcome.Failed;
+		repoSettings.Tasks.StopOnFailed = false;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(
+				new List<string> { @"C:\Projects\my-api\tasks\todo\01_First.md", @"C:\Projects\my-api\tasks\todo\02_Second.md" }
+			);
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => runClaude.Run(A<string>.Ignored, A<ClaudeSettings>.Ignored, A<List<ReferenceFile>>.Ignored))
+			.MustHaveHappenedTwiceExactly();
+	}
+
+	[Fact]
+	public async Task NotCommitWhenTaskFails()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => commitChanges.Commit(A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotPushWhenTaskFails()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => pushChanges.Push(A<string>.Ignored)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task ClassifyTaskResultAfterRunningClaude()
+	{
+		A.CallTo(() => discoverTasks.Discover(A<string>.Ignored))
+			.Returns(new List<string> { @"C:\Projects\my-api\tasks\todo\01_MyTask.md" });
+
+		await processRepository.Process(repositorySettings, globalClaudeSettings);
+
+		A.CallTo(() => classifyTaskResult.Classify(claudeResult)).MustHaveHappenedOnceExactly();
 	}
 }

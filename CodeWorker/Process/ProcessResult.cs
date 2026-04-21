@@ -7,4 +7,8 @@ public class ProcessResult
 	public List<string> OutputLines { get; set; } = new();
 
 	public List<string> ErrorLines { get; set; } = new();
+
+	public bool TimedOut { get; set; }
+
+	public bool FailedToStart { get; set; }
 }

@@ -110,6 +110,23 @@ public class SetupRepositoryTests
 	}
 
 	[Fact]
+	public async Task CreateTheFailedDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\failed")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteGitKeepToFailedDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\failed\.gitkeep", string.Empty))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
 	public async Task WriteSettingsJsonToTasksDirectory()
 	{
 		await setupRepository.Setup(repositoryPath);

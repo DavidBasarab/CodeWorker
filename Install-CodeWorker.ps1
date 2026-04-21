@@ -12,6 +12,38 @@ function Write-Step([string]$Message)
 	Write-Host "--- $Message ---" -ForegroundColor Cyan
 }
 
+function Test-CodeWorkerInstalled([string]$installPath)
+{
+	$exePath = Join-Path $installPath "FatCatCodeWorker.exe"
+
+	return Test-Path $exePath
+}
+
+function Stop-RunningCodeWorker
+{
+	$runningProcesses = Get-Process -Name "FatCatCodeWorker" -ErrorAction SilentlyContinue
+
+	if ($runningProcesses)
+	{
+		Write-Host "Stopping running FatCatCodeWorker process(es)..." -ForegroundColor Yellow
+
+		$runningProcesses | Stop-Process -Force
+		Start-Sleep -Seconds 1
+	}
+}
+
+# Detect install vs update
+$isUpdate = Test-CodeWorkerInstalled -installPath $InstallPath
+
+if ($isUpdate)
+{
+	Write-Step "Updating existing CodeWorker installation at $InstallPath"
+}
+else
+{
+	Write-Step "Installing CodeWorker to $InstallPath"
+}
+
 # Verify prerequisites
 Write-Step "Checking prerequisites"
 
@@ -51,7 +83,7 @@ $tempRepo = Join-Path $env:TEMP "CodeWorker-build"
 
 if (Test-Path $tempRepo)
 {
-	Write-Step "Updating existing source in $tempRepo"
+	Write-Step "Fetching latest source in $tempRepo"
 
 	Push-Location $tempRepo
 
@@ -68,8 +100,21 @@ else
 	git clone --branch $Branch $RepoUrl $tempRepo
 }
 
+# Stop any running instance so publish can overwrite the exe
+if ($isUpdate)
+{
+	Stop-RunningCodeWorker
+}
+
 # Build and publish
-Write-Step "Publishing to $InstallPath"
+if ($isUpdate)
+{
+	Write-Step "Republishing latest build to $InstallPath"
+}
+else
+{
+	Write-Step "Publishing to $InstallPath"
+}
 
 dotnet publish "$tempRepo\CodeWorker\CodeWorker.csproj" -c Release -o $InstallPath
 
@@ -79,7 +124,14 @@ if ($LASTEXITCODE -ne 0)
 	exit 1
 }
 
-Write-Host "Published successfully to $InstallPath" -ForegroundColor Green
+if ($isUpdate)
+{
+	Write-Host "Updated successfully at $InstallPath" -ForegroundColor Green
+}
+else
+{
+	Write-Host "Published successfully to $InstallPath" -ForegroundColor Green
+}
 
 # Add to PATH if not already present
 Write-Step "Checking PATH"
@@ -114,5 +166,14 @@ else
 }
 
 Write-Host ""
-Write-Host "Installation complete." -ForegroundColor Green
-Write-Host "Open a new terminal and run: FatCatCodeWorker --help" -ForegroundColor Cyan
+
+if ($isUpdate)
+{
+	Write-Host "Update complete." -ForegroundColor Green
+}
+else
+{
+	Write-Host "Installation complete." -ForegroundColor Green
+}
+
+Write-Host "Run: FatCatCodeWorker --help" -ForegroundColor Cyan

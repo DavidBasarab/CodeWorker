@@ -28,6 +28,7 @@ public class SetupRepository(IFileSystemTools fileSystemTools, ILogger logger) :
 		var todoPath = Path.Combine(tasksPath, "todo");
 		var donePath = Path.Combine(tasksPath, "done");
 		var blockedPath = Path.Combine(tasksPath, "blocked");
+		var failedPath = Path.Combine(tasksPath, "failed");
 		var pendingPath = Path.Combine(tasksPath, "pending");
 
 		logger.Information("Setting up task folders at {RepositoryPath}", repositoryPath);
@@ -35,11 +36,13 @@ public class SetupRepository(IFileSystemTools fileSystemTools, ILogger logger) :
 		fileSystemTools.EnsureDirectory(todoPath);
 		fileSystemTools.EnsureDirectory(donePath);
 		fileSystemTools.EnsureDirectory(blockedPath);
+		fileSystemTools.EnsureDirectory(failedPath);
 		fileSystemTools.EnsureDirectory(pendingPath);
 
 		await fileSystemTools.WriteAllText(Path.Combine(todoPath, ".gitkeep"), string.Empty);
 		await fileSystemTools.WriteAllText(Path.Combine(donePath, ".gitkeep"), string.Empty);
 		await fileSystemTools.WriteAllText(Path.Combine(blockedPath, ".gitkeep"), string.Empty);
+		await fileSystemTools.WriteAllText(Path.Combine(failedPath, ".gitkeep"), string.Empty);
 		await fileSystemTools.WriteAllText(Path.Combine(pendingPath, ".gitkeep"), string.Empty);
 		await fileSystemTools.WriteAllText(Path.Combine(tasksPath, "README.md"), ReadEmbeddedResource("TasksReadme.md"));
 		await fileSystemTools.WriteAllText(

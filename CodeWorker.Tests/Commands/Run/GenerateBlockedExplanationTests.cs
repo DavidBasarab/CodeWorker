@@ -86,43 +86,34 @@ public class GenerateBlockedExplanationTests
 	}
 
 	[Fact]
-	public async Task IncludeRecommendedFixForTokenLimitError()
+	public async Task IncludeRecommendedFixForMissingResource()
 	{
-		processResult.ErrorLines = new List<string> { "token limit exceeded" };
+		processResult.OutputLines = new List<string> { "BLOCKED: required file does not exist" };
 
 		await generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks\blocked", "01_MyTask.md", processResult);
 
-		writtenContent.Should().Contain("Increase token limit or simplify the task");
+		writtenContent.Should().Contain("Resolve the missing resource referenced by the task, then re-queue");
 	}
 
 	[Fact]
-	public async Task IncludeRecommendedFixForAuthenticationError()
+	public async Task IncludeRecommendedFixForContradictoryInstructions()
 	{
-		processResult.ErrorLines = new List<string> { "authentication failed" };
+		processResult.OutputLines = new List<string> { "BLOCKED: contradictory instructions" };
 
 		await generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks\blocked", "01_MyTask.md", processResult);
 
-		writtenContent.Should().Contain("Check API key and authentication configuration");
-	}
-
-	[Fact]
-	public async Task IncludeRecommendedFixForTimeoutError()
-	{
-		processResult.ErrorLines = new List<string> { "timeout reached" };
-
-		await generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks\blocked", "01_MyTask.md", processResult);
-
-		writtenContent.Should().Contain("Increase timeout or break the task into smaller pieces");
+		writtenContent.Should().Contain("Clarify the task instructions to remove ambiguity, then re-queue");
 	}
 
 	[Fact]
 	public async Task IncludeGenericRecommendedFixWhenNoPatternMatches()
 	{
-		processResult.ErrorLines = new List<string> { "Unknown failure" };
+		processResult.OutputLines = new List<string> { "BLOCKED: Unknown blocker" };
+		processResult.ErrorLines = new List<string>();
 
 		await generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks\blocked", "01_MyTask.md", processResult);
 
-		writtenContent.Should().Contain("Review the error output above and address the root cause");
+		writtenContent.Should().Contain("Review the blocker reported by Claude and adjust the task before re-queueing");
 	}
 
 	[Fact]

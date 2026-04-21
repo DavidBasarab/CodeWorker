@@ -18,6 +18,8 @@ public class ProcessRepository(
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
 	IGenerateBlockedExplanation generateBlockedExplanation,
+	IGenerateFailedExplanation generateFailedExplanation,
+	IClassifyTaskResult classifyTaskResult,
 	ICollectReferenceFiles collectReferenceFiles,
 	ICommitChanges commitChanges,
 	IPushChanges pushChanges,
@@ -54,6 +56,7 @@ public class ProcessRepository(
 		var pendingFolder = Path.Combine(repository.Path, repoSettings.Tasks.PendingFolder);
 		var doneFolder = Path.Combine(repository.Path, repoSettings.Tasks.DoneFolder);
 		var blockedFolder = Path.Combine(repository.Path, repoSettings.Tasks.BlockedFolder);
+		var failedFolder = Path.Combine(repository.Path, repoSettings.Tasks.FailedFolder);
 		var referenceFolder = Path.Combine(repository.Path, repoSettings.Tasks.ReferenceFolder);
 
 		var referenceFiles = await collectReferenceFiles.Collect(referenceFolder);
@@ -83,66 +86,89 @@ public class ProcessRepository(
 				await logTaskResult.Log(repository.Path, taskName, result, referenceFiles);
 			}
 
-			var isBlocked = result.ExitCode != 0;
+			var outcome = classifyTaskResult.Classify(result);
 
-			if (isBlocked)
+			switch (outcome)
 			{
-				moveTask.Move(pendingFilePath, blockedFolder);
-				await generateBlockedExplanation.Generate(blockedFolder, taskName, result);
+				case TaskOutcome.Blocked:
+					moveTask.Move(pendingFilePath, blockedFolder);
+					await generateBlockedExplanation.Generate(blockedFolder, taskName, result);
 
-				if (repoSettings.Tasks.StopOnBlocked)
-				{
-					logger.Warning(
-						"Task {TaskName} was blocked and StopOnBlocked is enabled, stopping repository processing",
-						taskName
-					);
-
-					return;
-				}
-			}
-			else
-			{
-				moveTask.Move(pendingFilePath, doneFolder);
-
-				if (repoSettings.Git?.CommitAfterEachTask == true)
-				{
-					var taskNameWithoutExtension = Path.GetFileNameWithoutExtension(taskFile);
-					var commitMessage = $"{repoSettings.Git.CommitMessagePrefix} {taskNameWithoutExtension}";
-
-					var commitResult = await commitChanges.Commit(repository.Path, commitMessage);
-
-					if (repoSettings.LogResults)
+					if (repoSettings.Tasks.StopOnBlocked)
 					{
-						await logTaskResult.Log(repository.Path, taskName, commitResult, referenceFiles);
-					}
-
-					if (commitResult.ExitCode != 0)
-					{
-						logger.Error("Commit failed for task {TaskName}, stopping repository processing", taskName);
-
-						return;
-					}
-				}
-
-				if (repoSettings.Git?.PushAfterEachTask == true)
-				{
-					var pushResult = await pushChanges.Push(repository.Path);
-
-					if (repoSettings.LogResults)
-					{
-						await logTaskResult.Log(repository.Path, taskName, pushResult, referenceFiles);
-					}
-
-					if (pushResult.ExitCode != 0)
-					{
-						logger.Error(
-							"Push failed for task {TaskName}, possible merge conflict — stopping repository processing",
+						logger.Warning(
+							"Task {TaskName} was blocked and StopOnBlocked is enabled, stopping repository processing",
 							taskName
 						);
 
 						return;
 					}
-				}
+
+					break;
+
+				case TaskOutcome.Failed:
+					moveTask.Move(pendingFilePath, failedFolder);
+					await generateFailedExplanation.Generate(failedFolder, taskName, result);
+
+					if (repoSettings.Tasks.StopOnFailed)
+					{
+						logger.Warning(
+							"Task {TaskName} failed and StopOnFailed is enabled, stopping repository processing",
+							taskName
+						);
+
+						return;
+					}
+
+					break;
+
+				case TaskOutcome.Done:
+					moveTask.Move(pendingFilePath, doneFolder);
+
+					if (repoSettings.Git?.CommitAfterEachTask == true)
+					{
+						var taskNameWithoutExtension = Path.GetFileNameWithoutExtension(taskFile);
+						var commitMessage = $"{repoSettings.Git.CommitMessagePrefix} {taskNameWithoutExtension}";
+
+						var commitResult = await commitChanges.Commit(repository.Path, commitMessage);
+
+						if (repoSettings.LogResults)
+						{
+							await logTaskResult.Log(repository.Path, taskName, commitResult, referenceFiles);
+						}
+
+						if (commitResult.ExitCode != 0)
+						{
+							logger.Error("Commit failed for task {TaskName}, stopping repository processing", taskName);
+
+							return;
+						}
+					}
+
+					if (repoSettings.Git?.PushAfterEachTask == true)
+					{
+						var pushResult = await pushChanges.Push(repository.Path);
+
+						if (repoSettings.LogResults)
+						{
+							await logTaskResult.Log(repository.Path, taskName, pushResult, referenceFiles);
+						}
+
+						if (pushResult.ExitCode != 0)
+						{
+							logger.Error(
+								"Push failed for task {TaskName}, possible merge conflict — stopping repository processing",
+								taskName
+							);
+
+							return;
+						}
+					}
+
+					break;
+
+				default:
+					throw new ArgumentOutOfRangeException(nameof(outcome));
 			}
 		}
 	}

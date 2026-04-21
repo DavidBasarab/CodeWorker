@@ -1,12 +1,7 @@
 
 ## Feature Context
 
-**Reference file inclusion** — `tasks/reference/` folder is created by setup, config field exists, but nothing reads or includes reference files in the Claude prompt
-
-## Tasks
-
-- [ ] Create a way to pass reference files
-- [ ] Log what files were used for each task.
+**Failed vs Blocked distinction** — README defines both states but only Blocked (non-zero exit) is implemented. No separation between infrastructure failures and logical block `ers
 
 ## Required Steps
 
