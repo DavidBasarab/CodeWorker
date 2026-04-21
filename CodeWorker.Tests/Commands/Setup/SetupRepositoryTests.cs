@@ -8,6 +8,7 @@ namespace Testing.FatCat.CodeWorker.Commands.Setup;
 public class SetupRepositoryTests
 {
 	private readonly IFileSystemTools fileSystemTools;
+	private readonly IReadEmbeddedResource readEmbeddedResource;
 	private readonly ITrackRepository trackRepository;
 	private readonly ILogger logger;
 	private readonly SetupRepository setupRepository;
@@ -16,10 +17,15 @@ public class SetupRepositoryTests
 	public SetupRepositoryTests()
 	{
 		fileSystemTools = A.Fake<IFileSystemTools>();
+		readEmbeddedResource = A.Fake<IReadEmbeddedResource>();
 		trackRepository = A.Fake<ITrackRepository>();
 		logger = A.Fake<ILogger>();
 
-		setupRepository = new SetupRepository(fileSystemTools, trackRepository, logger);
+		A.CallTo(() => readEmbeddedResource.Read("TasksReadme.md")).Returns("# Tasks\n\n01-example");
+		A.CallTo(() => readEmbeddedResource.Read("defaultSettings.json"))
+			.Returns("{\"Enabled\": true, \"Claude\": {}, \"Tasks\": {}, \"Notifications\": {}}");
+
+		setupRepository = new SetupRepository(fileSystemTools, readEmbeddedResource, trackRepository, logger);
 	}
 
 	[Fact]
@@ -55,6 +61,30 @@ public class SetupRepositoryTests
 	}
 
 	[Fact]
+	public async Task CreateTheFailedDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\failed")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task CreateThePendingDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\pending")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task CreateTheReferenceDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\reference")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
 	public async Task WriteGitKeepToTodoDirectory()
 	{
 		await setupRepository.Setup(repositoryPath);
@@ -82,33 +112,12 @@ public class SetupRepositoryTests
 	}
 
 	[Fact]
-	public async Task WriteReadmeToTasksDirectory()
+	public async Task WriteGitKeepToFailedDirectory()
 	{
 		await setupRepository.Setup(repositoryPath);
 
-		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\README.md", A<string>.That.Contains("# Tasks")))
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\failed\.gitkeep", string.Empty))
 			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task ReadmeContainsOrderingExplanation()
-	{
-		var capturedContent = string.Empty;
-
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("README.md"), A<string>._))
-			.Invokes((string path, string text) => capturedContent = text);
-
-		await setupRepository.Setup(repositoryPath);
-
-		capturedContent.Should().Contain("01-");
-	}
-
-	[Fact]
-	public async Task CreateThePendingDirectory()
-	{
-		await setupRepository.Setup(repositoryPath);
-
-		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\pending")).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -121,20 +130,29 @@ public class SetupRepositoryTests
 	}
 
 	[Fact]
-	public async Task CreateTheFailedDirectory()
+	public async Task WriteGitKeepToReferenceDirectory()
 	{
 		await setupRepository.Setup(repositoryPath);
 
-		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\failed")).MustHaveHappenedOnceExactly();
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\reference\.gitkeep", string.Empty))
+			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task WriteGitKeepToFailedDirectory()
+	public async Task WriteReadmeToTasksDirectory()
 	{
 		await setupRepository.Setup(repositoryPath);
 
-		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\failed\.gitkeep", string.Empty))
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\README.md", A<string>.That.Contains("# Tasks")))
 			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task ReadmeContainsOrderingExplanation()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => readEmbeddedResource.Read("TasksReadme.md")).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -147,18 +165,10 @@ public class SetupRepositoryTests
 	}
 
 	[Fact]
-	public async Task SettingsJsonContainsExpectedStructure()
+	public async Task ReadSettingsFromEmbeddedResource()
 	{
-		var capturedContent = string.Empty;
-
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("settings.json"), A<string>._))
-			.Invokes((string path, string text) => capturedContent = text);
-
 		await setupRepository.Setup(repositoryPath);
 
-		capturedContent.Should().Contain("\"Enabled\"");
-		capturedContent.Should().Contain("\"Claude\"");
-		capturedContent.Should().Contain("\"Tasks\"");
-		capturedContent.Should().Contain("\"Notifications\"");
+		A.CallTo(() => readEmbeddedResource.Read("defaultSettings.json")).MustHaveHappenedOnceExactly();
 	}
 }

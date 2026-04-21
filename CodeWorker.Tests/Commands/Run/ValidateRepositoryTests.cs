@@ -104,6 +104,26 @@ public class ValidateRepositoryTests
 	}
 
 	[Fact]
+	public void ReturnInvalidWhenFailedFolderDoesNotExist()
+	{
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.That.EndsWith("failed"))).Returns(false);
+
+		var result = validateRepository.Validate(repositorySettings);
+
+		result.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
+	public void ReturnInvalidWhenReferenceFolderDoesNotExist()
+	{
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.That.EndsWith("reference"))).Returns(false);
+
+		var result = validateRepository.Validate(repositorySettings);
+
+		result.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
 	public void ReturnInvalidWhenSettingsJsonDoesNotExist()
 	{
 		A.CallTo(() => fileSystemTools.FileExists(A<string>.That.EndsWith("settings.json"))).Returns(false);
@@ -121,7 +141,7 @@ public class ValidateRepositoryTests
 
 		var result = validateRepository.Validate(repositorySettings);
 
-		result.Errors.Should().HaveCount(7);
+		result.Errors.Should().HaveCount(9);
 	}
 
 	[Fact]

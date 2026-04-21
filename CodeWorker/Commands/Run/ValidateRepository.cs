@@ -20,10 +20,11 @@ public class ValidateRepository(IFileSystemTools fileSystemTools, ILogger logger
 
 		CheckDirectory(repositoryPath, errors);
 		CheckDirectory(tasksPath, errors);
-		CheckDirectory(Path.Combine(tasksPath, "todo"), errors);
-		CheckDirectory(Path.Combine(tasksPath, "done"), errors);
-		CheckDirectory(Path.Combine(tasksPath, "blocked"), errors);
-		CheckDirectory(Path.Combine(tasksPath, "pending"), errors);
+
+		foreach (var folder in RequiredTaskFolders.All)
+		{
+			CheckDirectory(Path.Combine(tasksPath, folder), errors);
+		}
 
 		CheckFile(Path.Combine(tasksPath, "settings.json"), errors);
 
