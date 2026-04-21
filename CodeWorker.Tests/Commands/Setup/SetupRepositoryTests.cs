@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Commands.Setup;
+using FatCat.CodeWorker.Commands.Track;
 using FatCat.Toolkit;
 using Serilog;
 
@@ -7,6 +8,7 @@ namespace Testing.FatCat.CodeWorker.Commands.Setup;
 public class SetupRepositoryTests
 {
 	private readonly IFileSystemTools fileSystemTools;
+	private readonly ITrackRepository trackRepository;
 	private readonly ILogger logger;
 	private readonly SetupRepository setupRepository;
 	private readonly string repositoryPath = @"C:\Projects\my-api";
@@ -14,9 +16,18 @@ public class SetupRepositoryTests
 	public SetupRepositoryTests()
 	{
 		fileSystemTools = A.Fake<IFileSystemTools>();
+		trackRepository = A.Fake<ITrackRepository>();
 		logger = A.Fake<ILogger>();
 
-		setupRepository = new SetupRepository(fileSystemTools, logger);
+		setupRepository = new SetupRepository(fileSystemTools, trackRepository, logger);
+	}
+
+	[Fact]
+	public async Task TrackTheRepositoryAfterSetup()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => trackRepository.Track(repositoryPath)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]

@@ -1,4 +1,5 @@
 using System.Reflection;
+using FatCat.CodeWorker.Commands.Track;
 using FatCat.Toolkit;
 using Serilog;
 
@@ -9,7 +10,8 @@ public interface ISetupRepository
 	Task Setup(string repositoryPath);
 }
 
-public class SetupRepository(IFileSystemTools fileSystemTools, ILogger logger) : ISetupRepository
+public class SetupRepository(IFileSystemTools fileSystemTools, ITrackRepository trackRepository, ILogger logger)
+	: ISetupRepository
 {
 	private static string ReadEmbeddedResource(string resourceName)
 	{
@@ -51,5 +53,7 @@ public class SetupRepository(IFileSystemTools fileSystemTools, ILogger logger) :
 		);
 
 		logger.Information("Repository setup complete at {RepositoryPath}", repositoryPath);
+
+		await trackRepository.Track(repositoryPath);
 	}
 }

@@ -3,6 +3,7 @@ param(
 	[string]$RepoUrl = "https://github.com/DavidBasarab/CodeWorker.git",
 	[string]$Branch = "main",
 	[switch]$CreateScheduledTask,
+	[switch]$RemoveScheduledTask,
 	[string]$TaskName = "FatCatCodeWorker",
 	[string]$ScheduleStartTime = "20:00",
 	[string]$ScheduleEndTime = "07:00",
@@ -50,6 +51,22 @@ function Get-ScheduleDuration([string]$startTime, [string]$endTime)
 	}
 
 	return $end - $start
+}
+
+function Remove-CodeWorkerScheduledTask([string]$name)
+{
+	$existingTask = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
+
+	if ($existingTask)
+	{
+		Unregister-ScheduledTask -TaskName $name -Confirm:$false
+
+		Write-Host "Scheduled task '$name' removed." -ForegroundColor Green
+	}
+	else
+	{
+		Write-Host "No scheduled task named '$name' found." -ForegroundColor Yellow
+	}
 }
 
 function New-CodeWorkerScheduledTask
@@ -129,6 +146,15 @@ function New-CodeWorkerScheduledTask
 	{
 		Write-Host "  Days:     Daily" -ForegroundColor Cyan
 	}
+}
+
+if ($RemoveScheduledTask)
+{
+	Write-Step "Removing scheduled task '$TaskName'"
+
+	Remove-CodeWorkerScheduledTask -name $TaskName
+
+	exit 0
 }
 
 # Detect install vs update

@@ -25,6 +25,70 @@ This project is intentionally designed to keep the human in control:
 
 ---
 
+## Getting Started
+
+### 1. Install
+
+Run the install script from PowerShell. It clones the repo, builds a release, publishes to `C:\Tools\CodeWorker` (by default), and adds that folder to your user PATH:
+
+```powershell
+pwsh -File Install-CodeWorker.ps1
+```
+
+If you don't have the repo locally yet, pull the script straight from GitHub:
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DavidBasarab/CodeWorker/main/Install-CodeWorker.ps1" -OutFile "$env:TEMP\Install-CodeWorker.ps1"
+pwsh -File "$env:TEMP\Install-CodeWorker.ps1"
+```
+
+Open a new terminal after install so the updated PATH is picked up, then verify:
+
+```powershell
+FatCatCodeWorker --help
+```
+
+See [Installation on Windows](#installation-on-windows) for prerequisites, custom install paths, and updates.
+
+### 2. Set Up a Repository
+
+Because `FatCatCodeWorker` is on your PATH, you can run it from inside any repository. From the root of the repo you want the runner to manage:
+
+```powershell
+cd C:\Projects\my-api
+FatCatCodeWorker setup
+```
+
+This creates the `tasks/` folder structure (`todo/`, `done/`, `blocked/`, `pending/`, `reference/`) and a default `tasks/settings.json`.
+
+You can also target a repository explicitly without changing directory:
+
+```powershell
+FatCatCodeWorker setup C:\Projects\my-api
+```
+
+### 3. Register the Repository
+
+Add the repository to the `Repositories` array in `appsettings.json` (in the install folder, e.g. `C:\Tools\CodeWorker\appsettings.json`):
+
+```json
+{
+  "Repositories": [
+    {
+      "Path": "C:\\Projects\\my-api",
+      "Enabled": true,
+      "SettingsPath": "C:\\Projects\\my-api\\tasks\\settings.json"
+    }
+  ]
+}
+```
+
+### 4. Queue a Task
+
+Drop a Markdown task file into `tasks/todo/` in the repository (see [Task File Requirements](#task-file-requirements) for the template) and commit it. The next runner invocation will pick it up.
+
+---
+
 ## Core Goals
 
 ### Primary Goal
