@@ -36,8 +36,7 @@ public class RunCommandTests
 		};
 
 		A.CallTo(() => loadAppSettings.Load()).Returns(Task.FromResult(appSettings));
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored, A<ClaudeSettings>.Ignored))
-			.Returns(Task.CompletedTask);
+		A.CallTo(() => processRepository.Process(A<RepositorySettings>._, A<ClaudeSettings>._)).Returns(Task.CompletedTask);
 
 		command = new RunCommand(loadAppSettings, processRepository, logger);
 	}
@@ -63,7 +62,7 @@ public class RunCommandTests
 	{
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored, A<ClaudeSettings>.Ignored))
+		A.CallTo(() => processRepository.Process(A<RepositorySettings>._, A<ClaudeSettings>._))
 			.MustHaveHappened(2, Times.Exactly);
 	}
 
@@ -75,7 +74,7 @@ public class RunCommandTests
 		A.CallTo(() =>
 				processRepository.Process(
 					A<RepositorySettings>.That.Matches(r => r.Path == @"C:\Projects\my-api"),
-					A<ClaudeSettings>.Ignored
+					A<ClaudeSettings>._
 				)
 			)
 			.MustHaveHappenedOnceExactly();
@@ -89,7 +88,7 @@ public class RunCommandTests
 		A.CallTo(() =>
 				processRepository.Process(
 					A<RepositorySettings>.That.Matches(r => r.Path == @"C:\Projects\my-frontend"),
-					A<ClaudeSettings>.Ignored
+					A<ClaudeSettings>._
 				)
 			)
 			.MustHaveHappenedOnceExactly();
@@ -110,7 +109,7 @@ public class RunCommandTests
 
 		A.CallTo(() =>
 				processRepository.Process(
-					A<RepositorySettings>.Ignored,
+					A<RepositorySettings>._,
 					A<ClaudeSettings>.That.Matches(c => c.Model == "claude-opus-4-6" && c.MaxTurns == 10)
 				)
 			)
@@ -124,7 +123,6 @@ public class RunCommandTests
 
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => processRepository.Process(A<RepositorySettings>.Ignored, A<ClaudeSettings>.Ignored))
-			.MustNotHaveHappened();
+		A.CallTo(() => processRepository.Process(A<RepositorySettings>._, A<ClaudeSettings>._)).MustNotHaveHappened();
 	}
 }

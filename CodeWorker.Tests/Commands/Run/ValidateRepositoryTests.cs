@@ -19,8 +19,8 @@ public class ValidateRepositoryTests
 
 		repositorySettings = new RepositorySettings { Path = @"C:\Projects\my-api", Enabled = true };
 
-		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.Ignored)).Returns(true);
-		A.CallTo(() => fileSystemTools.FileExists(A<string>.Ignored)).Returns(true);
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>._)).Returns(true);
+		A.CallTo(() => fileSystemTools.FileExists(A<string>._)).Returns(true);
 
 		validateRepository = new ValidateRepository(fileSystemTools, logger);
 	}
@@ -116,8 +116,8 @@ public class ValidateRepositoryTests
 	[Fact]
 	public void IncludeAllMissingPathsInErrors()
 	{
-		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.Ignored)).Returns(false);
-		A.CallTo(() => fileSystemTools.FileExists(A<string>.Ignored)).Returns(false);
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>._)).Returns(false);
+		A.CallTo(() => fileSystemTools.FileExists(A<string>._)).Returns(false);
 
 		var result = validateRepository.Validate(repositorySettings);
 
@@ -131,7 +131,7 @@ public class ValidateRepositoryTests
 
 		validateRepository.Validate(repositorySettings);
 
-		A.CallTo(() => logger.Warning(A<string>.Ignored, A<string>.Ignored, A<string>.Ignored)).MustHaveHappened();
+		A.CallTo(() => logger.Warning(A<string>._, A<string>._, A<string>._)).MustHaveHappened();
 	}
 
 	[Fact]
@@ -139,7 +139,7 @@ public class ValidateRepositoryTests
 	{
 		validateRepository.Validate(repositorySettings);
 
-		A.CallTo(() => logger.Warning(A<string>.Ignored, A<string>.Ignored, A<string>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => logger.Warning(A<string>._, A<string>._, A<string>._)).MustNotHaveHappened();
 	}
 
 	[Fact]

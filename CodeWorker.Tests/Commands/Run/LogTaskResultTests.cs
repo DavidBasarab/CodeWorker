@@ -18,7 +18,7 @@ public class LogTaskResultTests
 		appendFile = A.Fake<IAppendFile>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.Ignored)).Returns(Task.CompletedTask);
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>._)).Returns(Task.CompletedTask);
 
 		processResult = new ProcessResult
 		{
@@ -37,8 +37,7 @@ public class LogTaskResultTests
 	{
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(@"C:\Projects\my-api\CodeWorker.log", A<string>.Ignored))
-			.MustHaveHappenedOnceExactly();
+		A.CallTo(() => appendFile.Append(@"C:\Projects\my-api\CodeWorker.log", A<string>._)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -46,8 +45,7 @@ public class LogTaskResultTests
 	{
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.That.Contains("01_MyTask.md")))
-			.MustHaveHappenedOnceExactly();
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>.That.Contains("01_MyTask.md"))).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -55,8 +53,7 @@ public class LogTaskResultTests
 	{
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.That.Contains("Exit Code: 0")))
-			.MustHaveHappenedOnceExactly();
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>.That.Contains("Exit Code: 0"))).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -64,7 +61,7 @@ public class LogTaskResultTests
 	{
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.That.Contains("Task completed successfully")))
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>.That.Contains("Task completed successfully")))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -75,7 +72,7 @@ public class LogTaskResultTests
 
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.That.Contains("Something went wrong")))
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>.That.Contains("Something went wrong")))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -87,7 +84,7 @@ public class LogTaskResultTests
 
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.That.Contains("context.md, schema.md")))
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>.That.Contains("context.md, schema.md")))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -96,7 +93,7 @@ public class LogTaskResultTests
 	{
 		await logTaskResult.Log(@"C:\Projects\my-api", "01_MyTask.md", processResult, referenceFiles);
 
-		A.CallTo(() => appendFile.Append(A<string>.Ignored, A<string>.That.Contains("Reference Files: none")))
+		A.CallTo(() => appendFile.Append(A<string>._, A<string>.That.Contains("Reference Files: none")))
 			.MustHaveHappenedOnceExactly();
 	}
 }

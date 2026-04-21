@@ -46,7 +46,7 @@ public class UntrackRepositoryTests
 	{
 		await untrackRepository.Untrack(repositoryPath);
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored)).MustHaveHappenedOnceExactly();
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -54,8 +54,7 @@ public class UntrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await untrackRepository.Untrack(repositoryPath);
 
@@ -67,8 +66,7 @@ public class UntrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await untrackRepository.Untrack(repositoryPath);
 
@@ -80,8 +78,7 @@ public class UntrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await untrackRepository.Untrack(@"c:\projects\MY-API");
 
@@ -93,7 +90,7 @@ public class UntrackRepositoryTests
 	{
 		await untrackRepository.Untrack(@"C:\Projects\does-not-exist");
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).MustNotHaveHappened();
 	}
 
 	[Fact]
@@ -103,6 +100,6 @@ public class UntrackRepositoryTests
 
 		await untrackRepository.Untrack(repositoryPath);
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).MustNotHaveHappened();
 	}
 }

@@ -25,7 +25,7 @@ public class PushChangesTests
 			ErrorLines = new List<string>(),
 		};
 
-		A.CallTo(() => runProcess.Run(A<ProcessSettings>.Ignored))
+		A.CallTo(() => runProcess.Run(A<ProcessSettings>._))
 			.ReturnsLazily(
 				(ProcessSettings settings) =>
 				{

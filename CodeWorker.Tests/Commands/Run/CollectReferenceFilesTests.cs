@@ -19,8 +19,8 @@ public class CollectReferenceFilesTests
 		listFiles = A.Fake<IListFiles>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.Ignored)).Returns(true);
-		A.CallTo(() => listFiles.List(A<string>.Ignored)).Returns(Array.Empty<string>());
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>._)).Returns(true);
+		A.CallTo(() => listFiles.List(A<string>._)).Returns(Array.Empty<string>());
 
 		collectReferenceFiles = new CollectReferenceFiles(fileSystemTools, listFiles, logger);
 	}
@@ -108,7 +108,7 @@ public class CollectReferenceFilesTests
 
 		await collectReferenceFiles.Collect(referenceFolder);
 
-		A.CallTo(() => listFiles.List(A<string>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => listFiles.List(A<string>._)).MustNotHaveHappened();
 	}
 
 	[Fact]
@@ -121,7 +121,6 @@ public class CollectReferenceFilesTests
 
 		await collectReferenceFiles.Collect(referenceFolder);
 
-		A.CallTo(() => logger.Information(A<string>.That.Contains("Found"), A<int>.Ignored, A<string>.Ignored))
-			.MustHaveHappened();
+		A.CallTo(() => logger.Information(A<string>.That.Contains("Found"), A<int>._, A<string>._)).MustHaveHappened();
 	}
 }

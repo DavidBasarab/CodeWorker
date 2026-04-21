@@ -95,7 +95,7 @@ public class SetupRepositoryTests
 	{
 		var capturedContent = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("README.md"), A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("README.md"), A<string>._))
 			.Invokes((string path, string text) => capturedContent = text);
 
 		await setupRepository.Setup(repositoryPath);
@@ -142,7 +142,7 @@ public class SetupRepositoryTests
 	{
 		await setupRepository.Setup(repositoryPath);
 
-		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\settings.json", A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\settings.json", A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -151,7 +151,7 @@ public class SetupRepositoryTests
 	{
 		var capturedContent = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("settings.json"), A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("settings.json"), A<string>._))
 			.Invokes((string path, string text) => capturedContent = text);
 
 		await setupRepository.Setup(repositoryPath);

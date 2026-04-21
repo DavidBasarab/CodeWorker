@@ -1,5 +1,6 @@
 using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Git;
+using FatCat.CodeWorker.History;
 using FatCat.CodeWorker.Settings;
 using Serilog;
 
@@ -23,6 +24,7 @@ public class ProcessRepository(
 	ICollectReferenceFiles collectReferenceFiles,
 	ICommitChanges commitChanges,
 	IPushChanges pushChanges,
+	IRecordRunHistory recordRunHistory,
 	ILogger logger
 ) : IProcessRepository
 {
@@ -87,6 +89,16 @@ public class ProcessRepository(
 			}
 
 			var outcome = classifyTaskResult.Classify(result);
+
+			await recordRunHistory.Record(
+				new RunHistoryEntry
+				{
+					Repository = repository.Path,
+					TaskName = taskName,
+					Timestamp = DateTime.Now,
+					Success = outcome == TaskOutcome.Done,
+				}
+			);
 
 			switch (outcome)
 			{

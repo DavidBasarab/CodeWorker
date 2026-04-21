@@ -53,7 +53,7 @@ public class ListRepositoriesCommandTests
 	{
 		await command.Execute(new[] { "list" });
 
-		A.CallTo(() => logger.Information(A<string>.Ignored, @"C:\Projects\my-api", A<bool>.Ignored)).MustHaveHappened();
+		A.CallTo(() => logger.Information(A<string>._, @"C:\Projects\my-api", A<bool>._)).MustHaveHappened();
 	}
 
 	[Fact]
@@ -61,7 +61,7 @@ public class ListRepositoriesCommandTests
 	{
 		await command.Execute(new[] { "list" });
 
-		A.CallTo(() => logger.Information(A<string>.Ignored, @"C:\Projects\my-frontend", A<bool>.Ignored)).MustHaveHappened();
+		A.CallTo(() => logger.Information(A<string>._, @"C:\Projects\my-frontend", A<bool>._)).MustHaveHappened();
 	}
 
 	[Fact]

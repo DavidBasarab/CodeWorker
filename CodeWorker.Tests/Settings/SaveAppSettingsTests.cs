@@ -39,7 +39,7 @@ public class SaveAppSettingsTests
 	{
 		await saveAppSettings.Save(settings);
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("appsettings.json"), A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.That.EndsWith("appsettings.json"), A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -48,7 +48,7 @@ public class SaveAppSettingsTests
 	{
 		var capturedJson = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.Ignored, A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>._, A<string>._))
 			.Invokes((string _, string text) => capturedJson = text);
 
 		await saveAppSettings.Save(settings);
@@ -61,7 +61,7 @@ public class SaveAppSettingsTests
 	{
 		var capturedJson = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.Ignored, A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>._, A<string>._))
 			.Invokes((string _, string text) => capturedJson = text);
 
 		await saveAppSettings.Save(settings);
@@ -74,7 +74,7 @@ public class SaveAppSettingsTests
 	{
 		var capturedJson = string.Empty;
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.Ignored, A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>._, A<string>._))
 			.Invokes((string _, string text) => capturedJson = text);
 
 		await saveAppSettings.Save(settings);

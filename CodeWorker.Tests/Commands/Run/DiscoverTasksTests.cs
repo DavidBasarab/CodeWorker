@@ -15,7 +15,7 @@ public class DiscoverTasksTests
 		listFiles = A.Fake<IListFiles>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => listFiles.List(A<string>.Ignored)).Returns(Array.Empty<string>());
+		A.CallTo(() => listFiles.List(A<string>._)).Returns(Array.Empty<string>());
 
 		discoverTasks = new DiscoverTasks(listFiles, logger);
 	}
@@ -39,7 +39,7 @@ public class DiscoverTasksTests
 	[Fact]
 	public void ExcludeGitkeepFiles()
 	{
-		A.CallTo(() => listFiles.List(A<string>.Ignored)).Returns(new[] { @"C:\tasks\todo\.gitkeep" });
+		A.CallTo(() => listFiles.List(A<string>._)).Returns(new[] { @"C:\tasks\todo\.gitkeep" });
 
 		var result = discoverTasks.Discover(@"C:\tasks\todo");
 
@@ -49,7 +49,7 @@ public class DiscoverTasksTests
 	[Fact]
 	public void ReturnSingleTaskFile()
 	{
-		A.CallTo(() => listFiles.List(A<string>.Ignored)).Returns(new[] { @"C:\tasks\todo\01_MyTask.md" });
+		A.CallTo(() => listFiles.List(A<string>._)).Returns(new[] { @"C:\tasks\todo\01_MyTask.md" });
 
 		var result = discoverTasks.Discover(@"C:\tasks\todo");
 
@@ -60,7 +60,7 @@ public class DiscoverTasksTests
 	[Fact]
 	public void OrderByNumericPrefix()
 	{
-		A.CallTo(() => listFiles.List(A<string>.Ignored))
+		A.CallTo(() => listFiles.List(A<string>._))
 			.Returns(
 				new[] { @"C:\tasks\todo\14_ThisTask.md", @"C:\tasks\todo\03_SecondTask.md", @"C:\tasks\todo\11_ThirdTask.md" }
 			);
@@ -78,7 +78,7 @@ public class DiscoverTasksTests
 	[Fact]
 	public void PlaceUnnumberedFilesAfterNumberedFiles()
 	{
-		A.CallTo(() => listFiles.List(A<string>.Ignored))
+		A.CallTo(() => listFiles.List(A<string>._))
 			.Returns(new[] { @"C:\tasks\todo\AlphaTask.md", @"C:\tasks\todo\02_NumberedTask.md" });
 
 		var result = discoverTasks.Discover(@"C:\tasks\todo");
@@ -90,7 +90,7 @@ public class DiscoverTasksTests
 	[Fact]
 	public void OrderUnnumberedFilesAlphabetically()
 	{
-		A.CallTo(() => listFiles.List(A<string>.Ignored))
+		A.CallTo(() => listFiles.List(A<string>._))
 			.Returns(new[] { @"C:\tasks\todo\Zebra.md", @"C:\tasks\todo\Apple.md", @"C:\tasks\todo\Mango.md" });
 
 		var result = discoverTasks.Discover(@"C:\tasks\todo");
@@ -106,7 +106,7 @@ public class DiscoverTasksTests
 	[Fact]
 	public void HandleMixOfNumberedAndUnnumberedWithGitkeep()
 	{
-		A.CallTo(() => listFiles.List(A<string>.Ignored))
+		A.CallTo(() => listFiles.List(A<string>._))
 			.Returns(
 				new[]
 				{

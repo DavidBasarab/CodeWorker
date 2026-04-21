@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Commands;
+using FatCat.CodeWorker.Commands.Info;
 using FatCat.CodeWorker.Commands.List;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Commands.Setup;
@@ -14,6 +15,7 @@ public class CommandResolverTests
 	private readonly IRunTrackCommand trackCommand;
 	private readonly IRunUntrackCommand untrackCommand;
 	private readonly IRunListCommand listCommand;
+	private readonly IRunInfoCommand infoCommand;
 	private readonly CommandResolver resolver;
 
 	public CommandResolverTests()
@@ -23,8 +25,9 @@ public class CommandResolverTests
 		trackCommand = A.Fake<IRunTrackCommand>();
 		untrackCommand = A.Fake<IRunUntrackCommand>();
 		listCommand = A.Fake<IRunListCommand>();
+		infoCommand = A.Fake<IRunInfoCommand>();
 
-		resolver = new CommandResolver(setupCommand, runTaskCommand, trackCommand, untrackCommand, listCommand);
+		resolver = new CommandResolver(setupCommand, runTaskCommand, trackCommand, untrackCommand, listCommand, infoCommand);
 	}
 
 	[Fact]
@@ -113,5 +116,21 @@ public class CommandResolverTests
 		var result = resolver.Resolve(new[] { "List" });
 
 		result.Should().BeSameAs(listCommand);
+	}
+
+	[Fact]
+	public void ReturnInfoCommandWhenArgsContainInfo()
+	{
+		var result = resolver.Resolve(new[] { "info" });
+
+		result.Should().BeSameAs(infoCommand);
+	}
+
+	[Fact]
+	public void ReturnInfoCommandCaseInsensitive()
+	{
+		var result = resolver.Resolve(new[] { "INFO" });
+
+		result.Should().BeSameAs(infoCommand);
 	}
 }

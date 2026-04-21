@@ -26,7 +26,7 @@ public class GenerateFailedExplanationTests
 			ErrorLines = new List<string> { "Process timed out after 30 minutes" },
 		};
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.Ignored, A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>._, A<string>._))
 			.Invokes((string path, string content) => writtenContent = content)
 			.Returns(Task.CompletedTask);
 
@@ -38,7 +38,7 @@ public class GenerateFailedExplanationTests
 	{
 		await generateFailedExplanation.Generate(@"C:\Projects\my-api\tasks\failed", "01_MyTask.md", processResult);
 
-		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\failed\01_MyTask.failed.md", A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\failed\01_MyTask.failed.md", A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -178,13 +178,7 @@ public class GenerateFailedExplanationTests
 	{
 		await generateFailedExplanation.Generate(@"C:\Projects\my-api\tasks\failed", "01_MyTask.md", processResult);
 
-		A.CallTo(() =>
-				logger.Information(
-					A<string>.That.Contains("Generating failed explanation"),
-					A<string>.Ignored,
-					A<string>.Ignored
-				)
-			)
+		A.CallTo(() => logger.Information(A<string>.That.Contains("Generating failed explanation"), A<string>._, A<string>._))
 			.MustHaveHappened();
 	}
 }

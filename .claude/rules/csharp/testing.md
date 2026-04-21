@@ -67,6 +67,7 @@ public MyTests()
 - Keep constructor setup minimal and deterministic. Extract to helper methods if setup becomes large.
 
 ## FakeItEasy Patterns
+- Use `A<T>._` for argument matchers. Never use `A<T>.Ignored` — they are equivalent, and `A<T>._` is the canonical form in this codebase.
 - Use `Returns(...)` for static, unchanging responses.
 - Use `ReturnsLazily(...)` when the return value needs to vary between tests:
 

@@ -40,7 +40,6 @@ public class MoveTaskTests
 	{
 		moveTask.Move(@"C:\tasks\todo\01_MyTask.md", @"C:\tasks\pending");
 
-		A.CallTo(() => logger.Information(A<string>.That.Contains("Moving task"), A<string>.Ignored, A<string>.Ignored))
-			.MustHaveHappened();
+		A.CallTo(() => logger.Information(A<string>.That.Contains("Moving task"), A<string>._, A<string>._)).MustHaveHappened();
 	}
 }

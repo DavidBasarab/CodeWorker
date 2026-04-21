@@ -48,7 +48,7 @@ public class LoadRepoSettingsTests
 		fileSystemTools = A.Fake<IFileSystemTools>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => fileSystemTools.ReadAllText(A<string>.Ignored)).Returns(Task.FromResult(repoSettingsJson));
+		A.CallTo(() => fileSystemTools.ReadAllText(A<string>._)).Returns(Task.FromResult(repoSettingsJson));
 
 		loadRepoSettings = new LoadRepoSettings(fileSystemTools, logger);
 	}

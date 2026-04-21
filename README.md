@@ -59,7 +59,7 @@ cd C:\Projects\my-api
 FatCatCodeWorker setup
 ```
 
-This creates the `tasks/` folder structure (`todo/`, `done/`, `blocked/`, `pending/`, `reference/`) and a default `tasks/settings.json`.
+This creates the `tasks/` folder structure (`todo/`, `done/`, `blocked/`, `pending/`, `reference/`) and a default `tasks/settings.json`. The repository is also **automatically added to the runner's tracked list** — no manual edits to `appsettings.json` are needed.
 
 You can also target a repository explicitly without changing directory:
 
@@ -67,25 +67,147 @@ You can also target a repository explicitly without changing directory:
 FatCatCodeWorker setup C:\Projects\my-api
 ```
 
-### 3. Register the Repository
-
-Add the repository to the `Repositories` array in `appsettings.json` (in the install folder, e.g. `C:\Tools\CodeWorker\appsettings.json`):
-
-```json
-{
-  "Repositories": [
-    {
-      "Path": "C:\\Projects\\my-api",
-      "Enabled": true,
-      "SettingsPath": "C:\\Projects\\my-api\\tasks\\settings.json"
-    }
-  ]
-}
-```
-
-### 4. Queue a Task
+### 3. Queue a Task
 
 Drop a Markdown task file into `tasks/todo/` in the repository (see [Task File Requirements](#task-file-requirements) for the template) and commit it. The next runner invocation will pick it up.
+
+---
+
+## CLI Commands
+
+Every command below can be run from any directory because `FatCatCodeWorker` is on your PATH. Arguments in `[brackets]` are optional. All commands are case-insensitive.
+
+### `setup [path]`
+
+Scaffolds the `tasks/` folder structure and a default `tasks/settings.json` in the target repository, then auto-tracks it. If no path is given, the current working directory is used.
+
+```powershell
+PS C:\Projects\my-api> FatCatCodeWorker setup
+```
+
+Sample output:
+
+```text
+[2026-04-20 02:15:03] [INF] Running setup for repository at C:\Projects\my-api
+[2026-04-20 02:15:03] [INF] Setting up task folders at C:\Projects\my-api
+[2026-04-20 02:15:03] [INF] Repository setup complete at C:\Projects\my-api
+[2026-04-20 02:15:03] [INF] Tracking repository C:\Projects\my-api
+[2026-04-20 02:15:03] [INF] Saving app settings to C:\Tools\CodeWorker\appsettings.json
+```
+
+### `track [path|name]`
+
+Adds a repository to the tracked list. With no argument, tracks the current directory. With a folder-name argument, matches against an already-tracked repository (useful when re-enabling). With a path argument, tracks that path directly. Requires the repository to already have a `tasks/` folder — run `setup` first otherwise.
+
+```powershell
+PS C:\Projects\my-frontend> FatCatCodeWorker track
+```
+
+Sample output:
+
+```text
+[2026-04-20 02:16:10] [INF] Running track for repository at C:\Projects\my-frontend
+[2026-04-20 02:16:10] [INF] Tracking repository C:\Projects\my-frontend
+[2026-04-20 02:16:10] [INF] Saving app settings to C:\Tools\CodeWorker\appsettings.json
+```
+
+If it's already tracked:
+
+```text
+[2026-04-20 02:16:42] [INF] Running track for repository at C:\Projects\my-frontend
+[2026-04-20 02:16:42] [INF] Repository C:\Projects\my-frontend is already tracked
+```
+
+### `untrack [path|name]`
+
+Removes a repository from the tracked list. With no argument, removes the current directory. With a folder name (e.g. `my-api`), looks up the path in the tracked list. With an absolute path, removes that entry directly. The repository's files on disk are untouched — only the entry in `appsettings.json` is removed.
+
+```powershell
+PS C:\> FatCatCodeWorker untrack my-frontend
+```
+
+Sample output:
+
+```text
+[2026-04-20 02:18:22] [INF] Running untrack for repository at C:\Projects\my-frontend
+[2026-04-20 02:18:22] [INF] Untracked repository C:\Projects\my-frontend
+[2026-04-20 02:18:22] [INF] Saving app settings to C:\Tools\CodeWorker\appsettings.json
+```
+
+If no match is found:
+
+```text
+[2026-04-20 02:18:55] [WRN] No tracked repository found matching C:\Projects\does-not-exist
+```
+
+### `list`
+
+Prints every tracked repository with its enabled state.
+
+```powershell
+PS C:\> FatCatCodeWorker list
+```
+
+Sample output:
+
+```text
+[2026-04-20 02:19:40] [INF] Loading app settings from C:\Tools\CodeWorker\appsettings.json
+[2026-04-20 02:19:40] [INF] Tracked repositories (2):
+[2026-04-20 02:19:40] [INF]   C:\Projects\my-api (Enabled: True)
+[2026-04-20 02:19:40] [INF]   C:\Projects\my-frontend (Enabled: False)
+```
+
+When nothing is tracked:
+
+```text
+[2026-04-20 02:19:40] [INF] No repositories are being tracked
+```
+
+### `info [count]`
+
+Shows the last N runs across all tracked repositories — similar to `git log` for the runner. Each entry shows the timestamp, success/failure, repository, and task name. The default is the last 10 runs; pass a positive integer to increase (or decrease) the window.
+
+```powershell
+PS C:\> FatCatCodeWorker info
+```
+
+Sample output:
+
+```text
+[2026-04-20 07:32:01] [INF] Last 10 runs:
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:01:12 [success] C:\Projects\my-api — 01-refactor-auth-service.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:04:38 [success] C:\Projects\my-api — 02-add-unit-tests-auth.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:08:57 [failure] C:\Projects\my-api — 03-update-api-docs.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:14:11 [success] C:\Projects\my-frontend — 01-extract-room-card.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:21:04 [success] C:\Projects\my-frontend — 02-migrate-redux-slice.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:27:49 [failure] C:\Projects\my-frontend — 03-add-permission-check.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:33:02 [success] C:\Projects\my-api — 04-cleanup-logging.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:40:18 [success] C:\Projects\my-api — 05-tighten-dto-types.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:47:55 [success] C:\Projects\my-frontend — 04-add-room-slug.md
+[2026-04-20 07:32:01] [INF]   2026-04-20 02:55:20 [success] C:\Projects\my-frontend — 05-fix-form-reset.md
+```
+
+Show more runs:
+
+```powershell
+PS C:\> FatCatCodeWorker info 25
+```
+
+When there's no history yet:
+
+```text
+[2026-04-20 02:19:40] [INF] No run history found
+```
+
+History is stored in `runs.jsonl` alongside `appsettings.json` (one JSON object per line — easy to grep or tail).
+
+### `(no arguments)` — run tasks
+
+Invoked with no command, the runner walks every enabled tracked repository and processes its `tasks/todo/` queue. This is what Windows Task Scheduler invokes overnight.
+
+```powershell
+PS C:\> FatCatCodeWorker
+```
 
 ---
 

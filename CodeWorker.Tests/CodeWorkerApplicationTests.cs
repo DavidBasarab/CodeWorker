@@ -16,7 +16,7 @@ public class CodeWorkerApplicationTests
 		resolvedCommand = A.Fake<ICommand>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => resolveCommand.Resolve(A<string[]>.Ignored)).Returns(resolvedCommand);
+		A.CallTo(() => resolveCommand.Resolve(A<string[]>._)).Returns(resolvedCommand);
 
 		application = new CodeWorkerApplication(resolveCommand, logger);
 	}

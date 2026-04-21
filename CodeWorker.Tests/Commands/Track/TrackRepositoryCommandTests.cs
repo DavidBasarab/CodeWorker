@@ -18,7 +18,7 @@ public class TrackRepositoryCommandTests
 		resolveRepositoryPath = A.Fake<IResolveRepositoryPath>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => resolveRepositoryPath.Resolve(A<string[]>.Ignored)).Returns(Task.FromResult(resolvedPath));
+		A.CallTo(() => resolveRepositoryPath.Resolve(A<string[]>._)).Returns(Task.FromResult(resolvedPath));
 
 		command = new TrackRepositoryCommand(trackRepository, resolveRepositoryPath, logger);
 	}

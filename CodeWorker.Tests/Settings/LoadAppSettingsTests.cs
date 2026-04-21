@@ -48,7 +48,7 @@ public class LoadAppSettingsTests
 		fileSystemTools = A.Fake<IFileSystemTools>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => fileSystemTools.ReadAllText(A<string>.Ignored)).Returns(Task.FromResult(settingsJson));
+		A.CallTo(() => fileSystemTools.ReadAllText(A<string>._)).Returns(Task.FromResult(settingsJson));
 
 		loadAppSettings = new LoadAppSettings(fileSystemTools, logger);
 	}

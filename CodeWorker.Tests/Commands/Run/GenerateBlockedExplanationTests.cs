@@ -25,7 +25,7 @@ public class GenerateBlockedExplanationTests
 			ErrorLines = new List<string> { "Some error occurred" },
 		};
 
-		A.CallTo(() => fileSystemTools.WriteAllText(A<string>.Ignored, A<string>.Ignored))
+		A.CallTo(() => fileSystemTools.WriteAllText(A<string>._, A<string>._))
 			.Invokes((string path, string content) => writtenContent = content)
 			.Returns(Task.CompletedTask);
 
@@ -37,9 +37,7 @@ public class GenerateBlockedExplanationTests
 	{
 		await generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks\blocked", "01_MyTask.md", processResult);
 
-		A.CallTo(() =>
-				fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\blocked\01_MyTask.blocked.md", A<string>.Ignored)
-			)
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\blocked\01_MyTask.blocked.md", A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -133,13 +131,7 @@ public class GenerateBlockedExplanationTests
 	{
 		await generateBlockedExplanation.Generate(@"C:\Projects\my-api\tasks\blocked", "01_MyTask.md", processResult);
 
-		A.CallTo(() =>
-				logger.Information(
-					A<string>.That.Contains("Generating blocked explanation"),
-					A<string>.Ignored,
-					A<string>.Ignored
-				)
-			)
+		A.CallTo(() => logger.Information(A<string>.That.Contains("Generating blocked explanation"), A<string>._, A<string>._))
 			.MustHaveHappened();
 	}
 }

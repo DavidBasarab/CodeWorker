@@ -18,7 +18,7 @@ public class UntrackRepositoryCommandTests
 		resolveRepositoryPath = A.Fake<IResolveRepositoryPath>();
 		logger = A.Fake<ILogger>();
 
-		A.CallTo(() => resolveRepositoryPath.Resolve(A<string[]>.Ignored)).Returns(Task.FromResult(resolvedPath));
+		A.CallTo(() => resolveRepositoryPath.Resolve(A<string[]>._)).Returns(Task.FromResult(resolvedPath));
 
 		command = new UntrackRepositoryCommand(untrackRepository, resolveRepositoryPath, logger);
 	}

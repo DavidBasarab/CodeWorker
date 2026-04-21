@@ -25,7 +25,7 @@ public class TrackRepositoryTests
 		currentSettings = new CodeWorkerSettings { Repositories = new List<RepositorySettings>() };
 
 		A.CallTo(() => loadAppSettings.Load()).ReturnsLazily(() => Task.FromResult(currentSettings));
-		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.Ignored)).Returns(true);
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>._)).Returns(true);
 
 		trackRepository = new TrackRepository(loadAppSettings, saveAppSettings, fileSystemTools, logger);
 	}
@@ -43,7 +43,7 @@ public class TrackRepositoryTests
 	{
 		await trackRepository.Track(repositoryPath);
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored)).MustHaveHappenedOnceExactly();
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
@@ -51,8 +51,7 @@ public class TrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await trackRepository.Track(repositoryPath);
 
@@ -64,8 +63,7 @@ public class TrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await trackRepository.Track(repositoryPath);
 
@@ -77,8 +75,7 @@ public class TrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await trackRepository.Track(repositoryPath);
 
@@ -90,8 +87,7 @@ public class TrackRepositoryTests
 	{
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await trackRepository.Track(repositoryPath);
 
@@ -105,8 +101,7 @@ public class TrackRepositoryTests
 
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await trackRepository.Track(repositoryPath);
 
@@ -120,7 +115,7 @@ public class TrackRepositoryTests
 
 		await trackRepository.Track(repositoryPath);
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).MustNotHaveHappened();
 	}
 
 	[Fact]
@@ -130,7 +125,7 @@ public class TrackRepositoryTests
 
 		await trackRepository.Track(repositoryPath);
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored)).MustNotHaveHappened();
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).MustNotHaveHappened();
 	}
 
 	[Fact]
@@ -147,8 +142,7 @@ public class TrackRepositoryTests
 
 		CodeWorkerSettings savedSettings = null;
 
-		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>.Ignored))
-			.Invokes((CodeWorkerSettings s) => savedSettings = s);
+		A.CallTo(() => saveAppSettings.Save(A<CodeWorkerSettings>._)).Invokes((CodeWorkerSettings s) => savedSettings = s);
 
 		await trackRepository.Track(repositoryPath);
 
