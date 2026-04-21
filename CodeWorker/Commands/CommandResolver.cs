@@ -28,33 +28,14 @@ public class CommandResolver(
 			return runTaskCommand;
 		}
 
-		var commandName = args[0];
-
-		if (string.Equals(commandName, "setup", StringComparison.OrdinalIgnoreCase))
+		return args[0].ToLowerInvariant() switch
 		{
-			return setupCommand;
-		}
-
-		if (string.Equals(commandName, "track", StringComparison.OrdinalIgnoreCase))
-		{
-			return trackCommand;
-		}
-
-		if (string.Equals(commandName, "untrack", StringComparison.OrdinalIgnoreCase))
-		{
-			return untrackCommand;
-		}
-
-		if (string.Equals(commandName, "list", StringComparison.OrdinalIgnoreCase))
-		{
-			return listCommand;
-		}
-
-		if (string.Equals(commandName, "info", StringComparison.OrdinalIgnoreCase))
-		{
-			return infoCommand;
-		}
-
-		return runTaskCommand;
+			"setup" => setupCommand,
+			"track" => trackCommand,
+			"untrack" => untrackCommand,
+			"list" => listCommand,
+			"info" => infoCommand,
+			_ => runTaskCommand,
+		};
 	}
 }

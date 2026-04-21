@@ -2,6 +2,7 @@ using System.Text;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
+using FatCat.Toolkit;
 using Serilog;
 
 namespace FatCat.CodeWorker.Claude;
@@ -11,7 +12,7 @@ public interface IRunClaude
 	Task<ProcessResult> Run(string markdownFilePath, ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles);
 }
 
-public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
+public class ClaudeRunner(IRunProcess runProcess, IFileSystemTools fileSystemTools, ILogger logger) : IRunClaude
 {
 	public async Task<ProcessResult> Run(
 		string markdownFilePath,
@@ -30,12 +31,14 @@ public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 			claudeSettings.TimeoutMinutes
 		);
 
-		var arguments = BuildArguments(markdownFilePath, claudeSettings, referenceFiles);
+		var promptContent = await fileSystemTools.ReadAllText(markdownFilePath);
+		var arguments = BuildArguments(claudeSettings, referenceFiles);
 
 		var settings = new ProcessSettings
 		{
 			FileName = "claude",
 			Arguments = arguments,
+			StandardInput = promptContent,
 			TimeoutMilliseconds = claudeSettings.TimeoutMinutes > 0 ? claudeSettings.TimeoutMinutes * 60 * 1000 : 0,
 		};
 
@@ -65,11 +68,11 @@ public class ClaudeRunner(IRunProcess runProcess, ILogger logger) : IRunClaude
 		return contentBuilder.ToString().Replace("\"", "\\\"").TrimEnd();
 	}
 
-	private string BuildArguments(string markdownFilePath, ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles)
+	private string BuildArguments(ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles)
 	{
 		var builder = new StringBuilder();
 
-		builder.Append($"-p --input-file \"{markdownFilePath}\"");
+		builder.Append("-p");
 
 		if (!string.IsNullOrEmpty(claudeSettings.Model))
 		{

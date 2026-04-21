@@ -55,6 +55,11 @@ public class RunProcess(ILogger logger) : IRunProcess
 			result.ErrorLines.Add(args.Data);
 		};
 
+		if (!string.IsNullOrEmpty(settings.StandardInput))
+		{
+			startInfo.RedirectStandardInput = true;
+		}
+
 		try
 		{
 			process.Start();
@@ -68,6 +73,12 @@ public class RunProcess(ILogger logger) : IRunProcess
 			result.ErrorLines.Add($"Failed to start process {settings.FileName}: {exception.Message}");
 
 			return result;
+		}
+
+		if (!string.IsNullOrEmpty(settings.StandardInput))
+		{
+			await process.StandardInput.WriteAsync(settings.StandardInput);
+			process.StandardInput.Close();
 		}
 
 		process.BeginOutputReadLine();

@@ -2,6 +2,7 @@ using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
+using FatCat.Toolkit;
 using Serilog;
 
 namespace Testing.FatCat.CodeWorker.Claude;
@@ -9,9 +10,11 @@ namespace Testing.FatCat.CodeWorker.Claude;
 public class ClaudeRunnerTests
 {
 	private readonly IRunProcess runProcess;
+	private readonly IFileSystemTools fileSystemTools;
 	private readonly ILogger logger;
 	private readonly ClaudeRunner claudeRunner;
 	private readonly string markdownFilePath = @"C:\Tasks\some-task.md";
+	private readonly string markdownFileContent = "# Task\nDo something useful";
 	private readonly List<ReferenceFile> referenceFiles;
 	private ProcessResult processResult;
 	private ProcessSettings capturedSettings;
@@ -20,7 +23,10 @@ public class ClaudeRunnerTests
 	public ClaudeRunnerTests()
 	{
 		runProcess = A.Fake<IRunProcess>();
+		fileSystemTools = A.Fake<IFileSystemTools>();
 		logger = A.Fake<ILogger>();
+
+		A.CallTo(() => fileSystemTools.ReadAllText(markdownFilePath)).Returns(Task.FromResult(markdownFileContent));
 
 		processResult = new ProcessResult
 		{
@@ -51,7 +57,7 @@ public class ClaudeRunnerTests
 
 		referenceFiles = new List<ReferenceFile>();
 
-		claudeRunner = new ClaudeRunner(runProcess, logger);
+		claudeRunner = new ClaudeRunner(runProcess, fileSystemTools, logger);
 	}
 
 	[Fact]
@@ -63,11 +69,19 @@ public class ClaudeRunnerTests
 	}
 
 	[Fact]
-	public async Task IncludeInputFileInArguments()
+	public async Task ReadTheMarkdownFile()
 	{
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedSettings.Arguments.Should().Contain($"--input-file \"{markdownFilePath}\"");
+		A.CallTo(() => fileSystemTools.ReadAllText(markdownFilePath)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task PassFileContentAsStandardInput()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.StandardInput.Should().Be(markdownFileContent);
 	}
 
 	[Fact]
@@ -322,7 +336,7 @@ public class ClaudeRunnerTests
 		var args = capturedSettings.Arguments;
 
 		args.Should().Contain("-p");
-		args.Should().Contain($"--input-file \"{markdownFilePath}\"");
+		args.Should().NotContain("--input-file");
 		args.Should().Contain("--model claude-opus-4-6");
 		args.Should().Contain("--max-turns 10");
 		args.Should().Contain("--output-format json");
