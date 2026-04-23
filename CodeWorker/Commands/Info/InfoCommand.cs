@@ -22,7 +22,7 @@ public class InfoCommand(ILoadRunHistory loadRunHistory, ILogger logger) : IRunI
 			return;
 		}
 
-		var entries = history.Skip(Math.Max(0, history.Count - count)).ToList();
+		var entries = history.TakeLast(count).ToList();
 
 		logger.Information("Last {Count} runs:", entries.Count);
 
