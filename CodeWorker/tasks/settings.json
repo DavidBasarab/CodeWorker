@@ -1,0 +1,40 @@
+{
+  "Enabled": true,
+  "LogResults": true,
+
+  "Git": {
+    "CommitAfterEachTask": true,
+    "PushAfterEachTask": true,
+    "PullBeforeEachTask": true,
+    "CommitMessagePrefix": "🤖",
+    "Branch": ""
+  },
+
+  "Claude": {
+    "Model": "claude-opus-4-6",
+    "MaxTurns": 100,
+    "SkipPermissions": true,
+    "OutputFormat": "json",
+    "SystemPromptFile": "",
+    "AllowedTools": [],
+    "TimeoutMinutes": 90
+  },
+
+  "Tasks": {
+    "TodoFolder": "tasks/todo",
+    "DoneFolder": "tasks/done",
+    "ReferenceFolder": "tasks/reference",
+    "PendingFolder": "tasks/pending",
+    "BlockedFolder": "tasks/blocked",
+    "FailedFolder": "tasks/failed",
+    "StopOnBlocked": true,
+    "StopOnFailed": true,
+    "RunPlanningPhase": false
+  },
+
+  "Notifications": {
+    "OnTaskComplete": false,
+    "OnTaskFailed": true,
+    "OnAllTasksComplete": true
+  }
+}
