@@ -18,7 +18,35 @@ public class RunProcess(ILogger logger) : IRunProcess
 	{
 		var result = new ProcessResult();
 
-		var startInfo = new ProcessStartInfo
+		using var process = new System.Diagnostics.Process();
+
+		process.StartInfo = CreateStartInfo(settings);
+
+		WireOutputHandlers(process, result);
+
+		if (!TryStart(process, result, settings))
+		{
+			return result;
+		}
+
+		await WriteStandardInput(process, settings);
+
+		process.BeginOutputReadLine();
+		process.BeginErrorReadLine();
+
+		await WaitForExit(process, result, settings);
+
+		if (!result.TimedOut)
+		{
+			result.ExitCode = process.ExitCode;
+		}
+
+		return result;
+	}
+
+	private ProcessStartInfo CreateStartInfo(ProcessSettings settings)
+	{
+		return new ProcessStartInfo
 		{
 			FileName = settings.FileName,
 			Arguments = settings.Arguments,
@@ -27,12 +55,12 @@ public class RunProcess(ILogger logger) : IRunProcess
 			RedirectStandardError = true,
 			UseShellExecute = false,
 			CreateNoWindow = true,
+			RedirectStandardInput = !string.IsNullOrEmpty(settings.StandardInput),
 		};
+	}
 
-		using var process = new System.Diagnostics.Process();
-
-		process.StartInfo = startInfo;
-
+	private void WireOutputHandlers(System.Diagnostics.Process process, ProcessResult result)
+	{
 		process.OutputDataReceived += (sender, args) =>
 		{
 			if (args.Data == null)
@@ -54,15 +82,15 @@ public class RunProcess(ILogger logger) : IRunProcess
 			logger.Warning("[stderr] {ErrorLine}", args.Data);
 			result.ErrorLines.Add(args.Data);
 		};
+	}
 
-		if (!string.IsNullOrEmpty(settings.StandardInput))
-		{
-			startInfo.RedirectStandardInput = true;
-		}
-
+	private bool TryStart(System.Diagnostics.Process process, ProcessResult result, ProcessSettings settings)
+	{
 		try
 		{
 			process.Start();
+
+			return true;
 		}
 		catch (Exception exception)
 		{
@@ -72,48 +100,47 @@ public class RunProcess(ILogger logger) : IRunProcess
 			result.ExitCode = -1;
 			result.ErrorLines.Add($"Failed to start process {settings.FileName}: {exception.Message}");
 
-			return result;
+			return false;
 		}
+	}
 
-		if (!string.IsNullOrEmpty(settings.StandardInput))
+	private async Task WriteStandardInput(System.Diagnostics.Process process, ProcessSettings settings)
+	{
+		if (string.IsNullOrEmpty(settings.StandardInput))
 		{
-			await process.StandardInput.WriteAsync(settings.StandardInput);
-			process.StandardInput.Close();
+			return;
 		}
 
-		process.BeginOutputReadLine();
-		process.BeginErrorReadLine();
+		await process.StandardInput.WriteAsync(settings.StandardInput);
+		process.StandardInput.Close();
+	}
 
-		if (settings.TimeoutMilliseconds > 0)
-		{
-			using var cancellationTokenSource = new CancellationTokenSource(settings.TimeoutMilliseconds);
-
-			try
-			{
-				await process.WaitForExitAsync(cancellationTokenSource.Token);
-			}
-			catch (OperationCanceledException)
-			{
-				logger.Error(
-					"Process timed out after {TimeoutMinutes} minutes, killing process",
-					settings.TimeoutMilliseconds / 60000
-				);
-				process.Kill(entireProcessTree: true);
-
-				result.TimedOut = true;
-				result.ExitCode = -1;
-				result.ErrorLines.Add($"Process timed out after {settings.TimeoutMilliseconds / 60000} minutes");
-
-				return result;
-			}
-		}
-		else
+	private async Task WaitForExit(System.Diagnostics.Process process, ProcessResult result, ProcessSettings settings)
+	{
+		if (settings.TimeoutMilliseconds <= 0)
 		{
 			await process.WaitForExitAsync();
+
+			return;
 		}
 
-		result.ExitCode = process.ExitCode;
+		using var cancellationTokenSource = new CancellationTokenSource(settings.TimeoutMilliseconds);
 
-		return result;
+		try
+		{
+			await process.WaitForExitAsync(cancellationTokenSource.Token);
+		}
+		catch (OperationCanceledException)
+		{
+			logger.Error(
+				"Process timed out after {TimeoutMinutes} minutes, killing process",
+				settings.TimeoutMilliseconds / 60000
+			);
+			process.Kill(entireProcessTree: true);
+
+			result.TimedOut = true;
+			result.ExitCode = -1;
+			result.ErrorLines.Add($"Process timed out after {settings.TimeoutMilliseconds / 60000} minutes");
+		}
 	}
 }
