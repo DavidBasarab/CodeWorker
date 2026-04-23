@@ -12,32 +12,30 @@ public interface IRunClaude
 	Task<ProcessResult> Run(string markdownFilePath, ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles);
 }
 
-public class ClaudeRunner(IRunProcess runProcess, IFileSystemTools fileSystemTools, ILogger logger) : IRunClaude
+public class ClaudeRunner(
+	IRunProcess runProcess,
+	IFileSystemTools fileSystemTools,
+	IBuildReferenceSystemPrompt buildReferenceSystemPrompt,
+	ILogger logger
+) : IRunClaude
 {
+	private StringBuilder arguments;
+
 	public async Task<ProcessResult> Run(
 		string markdownFilePath,
 		ClaudeSettings claudeSettings,
 		List<ReferenceFile> referenceFiles
 	)
 	{
-		logger.Information("Starting Claude with markdown file {MarkdownFilePath}", markdownFilePath);
-
-		logger.Information(
-			"Claude settings: Model={Model}, MaxTurns={MaxTurns}, SkipPermissions={SkipPermissions}, OutputFormat={OutputFormat}, TimeoutMinutes={TimeoutMinutes}",
-			claudeSettings.Model,
-			claudeSettings.MaxTurns,
-			claudeSettings.SkipPermissions,
-			claudeSettings.OutputFormat,
-			claudeSettings.TimeoutMinutes
-		);
+		LogClaudeStartup(markdownFilePath, claudeSettings);
 
 		var promptContent = await fileSystemTools.ReadAllText(markdownFilePath);
-		var arguments = BuildArguments(claudeSettings, referenceFiles);
+		var argumentString = BuildArguments(claudeSettings, referenceFiles);
 
 		var settings = new ProcessSettings
 		{
 			FileName = "claude",
-			Arguments = arguments,
+			Arguments = argumentString,
 			StandardInput = promptContent,
 			TimeoutMilliseconds = claudeSettings.TimeoutMinutes > 0 ? claudeSettings.TimeoutMinutes * 60 * 1000 : 0,
 		};
@@ -54,66 +52,99 @@ public class ClaudeRunner(IRunProcess runProcess, IFileSystemTools fileSystemToo
 		return result;
 	}
 
-	private string BuildReferenceContent(List<ReferenceFile> referenceFiles)
+	private void LogClaudeStartup(string markdownFilePath, ClaudeSettings claudeSettings)
 	{
-		var contentBuilder = new StringBuilder();
+		logger.Information("Starting Claude with markdown file {MarkdownFilePath}", markdownFilePath);
 
-		foreach (var file in referenceFiles)
-		{
-			contentBuilder.AppendLine($"## Reference: {file.Name}");
-			contentBuilder.AppendLine(file.Content);
-			contentBuilder.AppendLine();
-		}
-
-		return contentBuilder.ToString().Replace("\"", "\\\"").TrimEnd();
+		logger.Information(
+			"Claude settings: Model={Model}, MaxTurns={MaxTurns}, SkipPermissions={SkipPermissions}, OutputFormat={OutputFormat}, TimeoutMinutes={TimeoutMinutes}",
+			claudeSettings.Model,
+			claudeSettings.MaxTurns,
+			claudeSettings.SkipPermissions,
+			claudeSettings.OutputFormat,
+			claudeSettings.TimeoutMinutes
+		);
 	}
 
 	private string BuildArguments(ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles)
 	{
-		var builder = new StringBuilder();
+		arguments = new StringBuilder();
 
-		builder.Append("-p");
+		AppendPrintFlag();
+		AppendModel(claudeSettings);
+		AppendMaxTurns(claudeSettings);
+		AppendOutputFormat(claudeSettings);
+		AppendSystemPromptFile(claudeSettings);
+		AppendSkipPermissions(claudeSettings);
+		AppendAllowedTools(claudeSettings);
+		AppendReferenceFiles(referenceFiles);
 
+		return arguments.ToString();
+	}
+
+	private void AppendPrintFlag()
+	{
+		arguments.Append("-p");
+	}
+
+	private void AppendModel(ClaudeSettings claudeSettings)
+	{
 		if (!string.IsNullOrEmpty(claudeSettings.Model))
 		{
-			builder.Append($" --model {claudeSettings.Model}");
+			arguments.Append($" --model {claudeSettings.Model}");
 		}
+	}
 
+	private void AppendMaxTurns(ClaudeSettings claudeSettings)
+	{
 		if (claudeSettings.MaxTurns > 0)
 		{
-			builder.Append($" --max-turns {claudeSettings.MaxTurns}");
+			arguments.Append($" --max-turns {claudeSettings.MaxTurns}");
 		}
+	}
 
+	private void AppendOutputFormat(ClaudeSettings claudeSettings)
+	{
 		if (!string.IsNullOrEmpty(claudeSettings.OutputFormat))
 		{
-			builder.Append($" --output-format {claudeSettings.OutputFormat}");
+			arguments.Append($" --output-format {claudeSettings.OutputFormat}");
 		}
+	}
 
+	private void AppendSystemPromptFile(ClaudeSettings claudeSettings)
+	{
 		if (!string.IsNullOrEmpty(claudeSettings.SystemPromptFile))
 		{
-			builder.Append($" --system-prompt \"{claudeSettings.SystemPromptFile}\"");
+			arguments.Append($" --system-prompt \"{claudeSettings.SystemPromptFile}\"");
 		}
+	}
 
+	private void AppendSkipPermissions(ClaudeSettings claudeSettings)
+	{
 		if (claudeSettings.SkipPermissions)
 		{
-			builder.Append(" --dangerously-skip-permissions");
+			arguments.Append(" --dangerously-skip-permissions");
 		}
+	}
 
+	private void AppendAllowedTools(ClaudeSettings claudeSettings)
+	{
 		if (claudeSettings.AllowedTools is { Count: > 0 })
 		{
 			foreach (var tool in claudeSettings.AllowedTools)
 			{
-				builder.Append($" --allowedTools \"{tool}\"");
+				arguments.Append($" --allowedTools \"{tool}\"");
 			}
 		}
+	}
 
+	private void AppendReferenceFiles(List<ReferenceFile> referenceFiles)
+	{
 		if (referenceFiles is { Count: > 0 })
 		{
-			var referenceContent = BuildReferenceContent(referenceFiles);
+			var referenceContent = buildReferenceSystemPrompt.Build(referenceFiles);
 
-			builder.Append($" --append-system-prompt \"{referenceContent}\"");
+			arguments.Append($" --append-system-prompt \"{referenceContent}\"");
 		}
-
-		return builder.ToString();
 	}
 }

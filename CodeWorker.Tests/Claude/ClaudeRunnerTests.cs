@@ -11,6 +11,7 @@ public class ClaudeRunnerTests
 {
 	private readonly IRunProcess runProcess;
 	private readonly IFileSystemTools fileSystemTools;
+	private readonly IBuildReferenceSystemPrompt buildReferenceSystemPrompt;
 	private readonly ILogger logger;
 	private readonly ClaudeRunner claudeRunner;
 	private readonly string markdownFilePath = @"C:\Tasks\some-task.md";
@@ -25,6 +26,12 @@ public class ClaudeRunnerTests
 		runProcess = A.Fake<IRunProcess>();
 		fileSystemTools = A.Fake<IFileSystemTools>();
 		logger = A.Fake<ILogger>();
+
+		var realBuilder = new BuildReferenceSystemPrompt();
+		buildReferenceSystemPrompt = A.Fake<IBuildReferenceSystemPrompt>();
+
+		A.CallTo(() => buildReferenceSystemPrompt.Build(A<List<ReferenceFile>>._))
+			.ReturnsLazily((List<ReferenceFile> files) => realBuilder.Build(files));
 
 		A.CallTo(() => fileSystemTools.ReadAllText(markdownFilePath)).Returns(Task.FromResult(markdownFileContent));
 
@@ -57,7 +64,7 @@ public class ClaudeRunnerTests
 
 		referenceFiles = new List<ReferenceFile>();
 
-		claudeRunner = new ClaudeRunner(runProcess, fileSystemTools, logger);
+		claudeRunner = new ClaudeRunner(runProcess, fileSystemTools, buildReferenceSystemPrompt, logger);
 	}
 
 	[Fact]

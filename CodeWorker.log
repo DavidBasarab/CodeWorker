@@ -36,3 +36,30 @@ Reference Files: .gitkeep
 Output: {"type":"result","subtype":"success","is_error":false,"duration_ms":63361,"duration_api_ms":48047,"num_turns":13,"result":"All 43 tests pass. This task is already fully implemented:\n\n- **`RequiredTaskFolders`** — single source of truth with all 6 folder names\n- **`SetupRepository`** — uses `foreach` over `RequiredTaskFolders.All`\n- **`ValidateRepository`** — uses `foreach` over `RequiredTaskFolders.All`\n- **`IReadEmbeddedResource`** — extracted as injectable interface with `[ExcludeFromCodeCoverage]`\n- **Tests** — 7 for `RequiredTaskFolders`, 18 for `SetupRepository`, 12 for `ValidateRepository` — all passing\n\nThe task file should be moved from `pending` to `done`.","stop_reason":"end_turn","session_id":"2613f77d-c74a-4bd7-adf8-82fec6a03e71","total_cost_usd":0.443243,"usage":{"input_tokens":8,"cache_creation_input_tokens":41338,"cache_read_input_tokens":297431,"output_tokens":1445,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":41338,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[{"input_tokens":1,"output_tokens":177,"cache_read_input_tokens":51436,"cache_creation_input_tokens":1050,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":1050},"type":"message"}],"speed":"standard"},"modelUsage":{"claude-opus-4-6":{"inputTokens":8,"outputTokens":1445,"cacheReadInputTokens":297431,"cacheCreationInputTokens":41338,"webSearchRequests":0,"costUSD":0.443243,"contextWindow":200000,"maxOutputTokens":64000}},"permission_denials":[],"terminal_reason":"completed","fast_mode_state":"off","uuid":"5c04a038-beb5-4b19-b381-835f388b5a41"}
 Errors: 
 ---
+[2026-04-23 17:07:52] Task: 03-consolidate-task-folder-names.md | Exit Code: 0
+Reference Files: .gitkeep
+Output: [FixInstall e36c868] 🤖 03-consolidate-task-folder-names
+ 11 files changed, 68 insertions(+)
+ create mode 100644 CodeWorker/tasks/README.md
+ create mode 100644 CodeWorker/tasks/blocked/.gitkeep
+ create mode 100644 CodeWorker/tasks/done/.gitkeep
+ create mode 100644 CodeWorker/tasks/failed/.gitkeep
+ create mode 100644 CodeWorker/tasks/pending/.gitkeep
+ create mode 100644 CodeWorker/tasks/reference/.gitkeep
+ create mode 100644 CodeWorker/tasks/settings.json
+ create mode 100644 CodeWorker/tasks/todo/.gitkeep
+ rename tasks/{todo => done}/03-consolidate-task-folder-names.md (100%)
+ create mode 100644 tasks/reference/.gitkeep
+Errors: 
+---
+[2026-04-23 17:07:54] Task: 03-consolidate-task-folder-names.md | Exit Code: 0
+Reference Files: .gitkeep
+Output: 
+Errors: To https://github.com/DavidBasarab/CodeWorker.git
+   c67fcaa..e36c868  FixInstall -> FixInstall
+---
+[2026-04-23 17:11:32] Task: 04-refactor-claude-runner-arguments.md | Exit Code: 0
+Reference Files: .gitkeep
+Output: {"type":"result","subtype":"success","is_error":false,"duration_ms":215753,"duration_api_ms":150791,"num_turns":24,"result":"The build fails only because of the locked exe — not any compilation errors. `FatCatCodeWorker.exe` (PID 77564) is running and blocking the output copy. Can I kill that process so I can build and run the tests?\n\nIn the meantime, here's a summary of what was done:\n\n### Changes made\n\n**New file: `CodeWorker/Claude/BuildReferenceSystemPrompt.cs`**\n- Extracted `IBuildReferenceSystemPrompt` interface with `Build(List<ReferenceFile>)` method\n- `BuildReferenceSystemPrompt` class contains the reference content formatting logic (header per file, escape quotes, trim trailing whitespace)\n\n**Refactored: `CodeWorker/Claude/ClaudeRunner.cs`**\n- Added `IBuildReferenceSystemPrompt` as an injected dependency\n- `BuildArguments` now delegates to 8 small private helpers (`AppendPrintFlag`, `AppendModel`, `AppendMaxTurns`, `AppendOutputFormat`, `AppendSystemPromptFile`, `AppendSkipPermissions`, `AppendAllowedTools`, `AppendReferenceFiles`) — each 3-6 lines with a single guard clause\n- Extracted `LogClaudeStartup` private helper to consolidate the two top-of-`Run` log statements\n- Uses a `StringBuilder arguments` field (matching the endpoint pattern) so helpers share state without passing it around\n- No method exceeds ~15 lines\n\n**New file: `CodeWorker.Tests/Claude/BuildReferenceSystemPromptTests.cs`**\n- 6 tests covering: header formatting, content inclusion, multiple files, quote escaping, trailing whitespace trimming, empty list\n\n**Updated: `CodeWorker.Tests/Claude/ClaudeRunnerTests.cs`**\n- Added `IBuildReferenceSystemPrompt` fake that delegates to the real implementation so all existing reference-file tests pass unchanged\n- Updated constructor call to pass the new dependency","stop_reason":"end_turn","session_id":"cbea63ec-9ae9-45b3-8066-06c96bf9aea3","total_cost_usd":1.0630096499999997,"usage":{"input_tokens":22,"cache_creation_input_tokens":57129,"cache_read_input_tokens":1001652,"output_tokens":7065,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":57129,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[{"input_tokens":1,"output_tokens":465,"cache_read_input_tokens":66284,"cache_creation_input_tokens":1838,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":1838},"type":"message"}],"speed":"standard"},"modelUsage":{"claude-opus-4-6":{"inputTokens":22,"outputTokens":7065,"cacheReadInputTokens":1001652,"cacheCreationInputTokens":57129,"webSearchRequests":0,"costUSD":1.0346172499999997,"contextWindow":200000,"maxOutputTokens":64000},"claude-haiku-4-5-20251001":{"inputTokens":10,"outputTokens":167,"cacheReadInputTokens":19849,"cacheCreationInputTokens":20450,"webSearchRequests":0,"costUSD":0.028392399999999998,"contextWindow":200000,"maxOutputTokens":32000}},"permission_denials":[],"terminal_reason":"completed","fast_mode_state":"off","uuid":"88352552-882e-48cf-8c14-6a7e63e26dae"}
+Errors: 
+---
