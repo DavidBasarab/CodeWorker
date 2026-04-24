@@ -192,4 +192,86 @@ public class ProcessTaskTests
 
 		decision.Should().Be(TaskProcessingDecision.Stop);
 	}
+
+	[Fact]
+	public async Task RethrowExceptionsFromMoveTask()
+	{
+		var expectedException = new InvalidOperationException("move failed");
+
+		A.CallTo(() => moveTask.Move(A<string>._, A<string>._)).Throws(expectedException);
+
+		var act = async () => await processTask.Run(context, taskFile);
+
+		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("move failed");
+	}
+
+	[Fact]
+	public async Task LogErrorWhenExceptionIsThrown()
+	{
+		var expectedException = new InvalidOperationException("move failed");
+
+		A.CallTo(() => moveTask.Move(A<string>._, A<string>._)).Throws(expectedException);
+
+		var act = async () => await processTask.Run(context, taskFile);
+
+		await act.Should().ThrowAsync<InvalidOperationException>();
+
+		A.CallTo(() =>
+				logger.Error(
+					expectedException,
+					A<string>.That.Contains("Unhandled exception"),
+					A<string>.That.Contains("01_MyTask.md")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task RethrowExceptionsFromRunClaude()
+	{
+		var expectedException = new InvalidOperationException("claude failed");
+
+		A.CallTo(() => runClaude.Run(A<string>._, A<ClaudeSettings>._, A<List<ReferenceFile>>._)).Throws(expectedException);
+
+		var act = async () => await processTask.Run(context, taskFile);
+
+		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("claude failed");
+	}
+
+	[Fact]
+	public async Task RethrowExceptionsFromClassifyTaskResult()
+	{
+		var expectedException = new InvalidOperationException("classify failed");
+
+		A.CallTo(() => classifyTaskResult.Classify(A<ProcessResult>._)).Throws(expectedException);
+
+		var act = async () => await processTask.Run(context, taskFile);
+
+		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("classify failed");
+	}
+
+	[Fact]
+	public async Task RethrowExceptionsFromOutcomeHandler()
+	{
+		var expectedException = new InvalidOperationException("handler failed");
+
+		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._)).Throws(expectedException);
+
+		var act = async () => await processTask.Run(context, taskFile);
+
+		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("handler failed");
+	}
+
+	[Fact]
+	public async Task InvokeOutcomeHandlerOnlyAfterHistoryIsRecorded()
+	{
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => recordRunHistory.Record(A<RunHistoryEntry>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(
+				A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
+					.MustHaveHappenedOnceExactly()
+			);
+	}
 }

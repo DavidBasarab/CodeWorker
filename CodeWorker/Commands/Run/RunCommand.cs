@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using FatCat.CodeWorker.Settings;
 using Serilog;
 
@@ -11,6 +12,8 @@ public class RunCommand(ILoadAppSettings loadAppSettings, IProcessRepository pro
 	public async Task Execute(string[] args)
 	{
 		logger.Information("Starting task runner");
+
+		var stopwatch = Stopwatch.StartNew();
 
 		var settings = await loadAppSettings.Load();
 
@@ -29,6 +32,12 @@ public class RunCommand(ILoadAppSettings loadAppSettings, IProcessRepository pro
 			await processRepository.Process(repository, settings.Claude);
 		}
 
-		logger.Information("Task runner complete");
+		stopwatch.Stop();
+
+		logger.Information(
+			"Task runner complete — processed {RepositoryCount} repositories in {DurationSeconds}s",
+			settings.Repositories.Count,
+			stopwatch.Elapsed.TotalSeconds
+		);
 	}
 }

@@ -10,7 +10,15 @@ public class HandleBlockedTaskOutcome(
 {
 	public async Task<TaskProcessingDecision> Handle(TaskExecutionContext context, TaskExecution task)
 	{
+		logger.Information(
+			"Handling Blocked outcome for {TaskName}: moving to {Destination}",
+			task.TaskName,
+			context.Folders.Blocked
+		);
+
 		moveTask.Move(task.PendingFilePath, context.Folders.Blocked);
+
+		logger.Information("Moved {TaskName} to {Destination}", task.TaskName, context.Folders.Blocked);
 
 		await generateBlockedExplanation.Generate(context.Folders.Blocked, task.TaskName, task.Result);
 

@@ -405,4 +405,12 @@ public class ClaudeRunnerTests
 		args.Should().Contain("schema.md");
 		args.Should().Contain("schema content");
 	}
+
+	[Fact]
+	public async Task PassLiveLogPathDerivedFromMarkdownFile()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.LiveLogPath.Should().Be(@"C:\Tasks\some-task.live.log");
+	}
 }

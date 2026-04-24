@@ -33,19 +33,46 @@ public class ProcessTask(
 			PendingFilePath = Path.Combine(context.Folders.Pending, Path.GetFileName(taskFile)),
 		};
 
-		logger.Information("Starting task {TaskName}", task.TaskName);
+		try
+		{
+			logger.Information("Starting task {TaskName}", task.TaskName);
 
-		moveTask.Move(task.TaskFile, context.Folders.Pending);
+			logger.Information("Moving task {TaskName} to pending", task.TaskName);
+			moveTask.Move(task.TaskFile, context.Folders.Pending);
+			logger.Information("Task {TaskName} moved to pending", task.TaskName);
 
-		task.Result = await runClaude.Run(task.PendingFilePath, context.ClaudeSettings, context.ReferenceFiles);
+			logger.Information("Invoking Claude for {TaskName}", task.TaskName);
+			task.Result = await runClaude.Run(task.PendingFilePath, context.ClaudeSettings, context.ReferenceFiles);
+			logger.Information(
+				"Claude run returned for {TaskName}: ExitCode={ExitCode}, TimedOut={TimedOut}, FailedToStart={FailedToStart}, OutputLines={OutputLineCount}, ErrorLines={ErrorLineCount}",
+				task.TaskName,
+				task.Result.ExitCode,
+				task.Result.TimedOut,
+				task.Result.FailedToStart,
+				task.Result.OutputLines.Count,
+				task.Result.ErrorLines.Count
+			);
 
-		await LogResultIfEnabled();
+			await LogResultIfEnabled();
 
-		var outcome = classifyTaskResult.Classify(task.Result);
+			var outcome = classifyTaskResult.Classify(task.Result);
+			logger.Information("Classified task {TaskName} as {Outcome}", task.TaskName, outcome);
 
-		await RecordHistory(outcome);
+			await RecordHistory(outcome);
+			logger.Information("Recorded run history for {TaskName}", task.TaskName);
 
-		return await outcomeHandlerFactory.For(outcome).Handle(context, task);
+			logger.Information("Invoking outcome handler for {Outcome} on {TaskName}", outcome, task.TaskName);
+			var decision = await outcomeHandlerFactory.For(outcome).Handle(context, task);
+			logger.Information("Outcome handler complete for {TaskName}", task.TaskName);
+
+			return decision;
+		}
+		catch (Exception exception)
+		{
+			logger.Error(exception, "Unhandled exception processing task {TaskName}", task.TaskName);
+
+			throw;
+		}
 	}
 
 	private async Task LogResultIfEnabled()

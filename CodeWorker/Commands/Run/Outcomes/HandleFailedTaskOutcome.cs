@@ -7,7 +7,15 @@ public class HandleFailedTaskOutcome(IMoveTask moveTask, IGenerateFailedExplanat
 {
 	public async Task<TaskProcessingDecision> Handle(TaskExecutionContext context, TaskExecution task)
 	{
+		logger.Information(
+			"Handling Failed outcome for {TaskName}: moving to {Destination}",
+			task.TaskName,
+			context.Folders.Failed
+		);
+
 		moveTask.Move(task.PendingFilePath, context.Folders.Failed);
+
+		logger.Information("Moved {TaskName} to {Destination}", task.TaskName, context.Folders.Failed);
 
 		await generateFailedExplanation.Generate(context.Folders.Failed, task.TaskName, task.Result);
 

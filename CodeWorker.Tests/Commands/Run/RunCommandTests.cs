@@ -99,7 +99,8 @@ public class RunCommandTests
 	{
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => logger.Information("Task runner complete")).MustHaveHappenedOnceExactly();
+		A.CallTo(() => logger.Information(A<string>.That.Contains("Task runner complete"), 2, A<double>._))
+			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
