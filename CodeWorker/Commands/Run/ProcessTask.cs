@@ -14,6 +14,7 @@ public class ProcessTask(
 	IMoveTask moveTask,
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
+	IWriteTaskLog writeTaskLog,
 	IClassifyTaskResult classifyTaskResult,
 	IRecordRunHistory recordRunHistory,
 	ITaskOutcomeHandlerFactory outcomeHandlerFactory,
