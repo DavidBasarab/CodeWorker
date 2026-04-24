@@ -37,12 +37,12 @@ public class RunProcess(ILogger logger) : IRunProcess
 
 		logger.Information("Process started, PID={ProcessId}", process.Id);
 
-		await WriteStandardInput(process, settings);
-
 		var streamState = new StreamReadState();
 
 		var stdoutReader = StreamOutput(process.StandardOutput, result.OutputLines, "stdout", liveLogWriter, streamState);
 		var stderrReader = StreamOutput(process.StandardError, result.ErrorLines, "stderr", liveLogWriter, streamState);
+
+		await WriteStandardInput(process, settings);
 
 		using var heartbeatTokenSource = new CancellationTokenSource();
 

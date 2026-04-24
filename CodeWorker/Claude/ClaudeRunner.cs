@@ -111,6 +111,7 @@ public class ClaudeRunner(
 		AppendModel(claudeSettings);
 		AppendMaxTurns(claudeSettings);
 		AppendOutputFormat(claudeSettings);
+		AppendVerboseFlagForStreamJson(claudeSettings);
 		AppendSystemPromptFile(claudeSettings);
 		AppendSkipPermissions(claudeSettings);
 		AppendAllowedTools(claudeSettings);
@@ -145,6 +146,14 @@ public class ClaudeRunner(
 		if (!string.IsNullOrEmpty(claudeSettings.OutputFormat))
 		{
 			arguments.Append($" --output-format {claudeSettings.OutputFormat}");
+		}
+	}
+
+	private void AppendVerboseFlagForStreamJson(ClaudeSettings claudeSettings)
+	{
+		if (claudeSettings.OutputFormat == "stream-json")
+		{
+			arguments.Append(" --verbose");
 		}
 	}
 
