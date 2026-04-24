@@ -86,11 +86,22 @@ public class ProcessRepository(
 
 		LogReferenceFiles(referenceFiles);
 
+		var claudeSettings = globalClaudeSettings.MergeWith(repoSettings.Claude);
+
+		logger.Information(
+			"Claude settings: Model={Model}, MaxTurns={MaxTurns}, SkipPermissions={SkipPermissions}, OutputFormat={OutputFormat}, TimeoutMinutes={TimeoutMinutes}",
+			claudeSettings.Model,
+			claudeSettings.MaxTurns,
+			claudeSettings.SkipPermissions,
+			claudeSettings.OutputFormat,
+			claudeSettings.TimeoutMinutes
+		);
+
 		return new TaskExecutionContext
 		{
 			Repository = repository,
 			RepoSettings = repoSettings,
-			ClaudeSettings = globalClaudeSettings.MergeWith(repoSettings.Claude),
+			ClaudeSettings = claudeSettings,
 			Folders = folders,
 			ReferenceFiles = referenceFiles,
 		};

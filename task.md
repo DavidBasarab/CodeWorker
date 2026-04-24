@@ -1,35 +1,35 @@
+# Task
 
-## Feature Context
+When running a task and the task is completed write a .log file that references the name of the task that shows the output from claude and any information that is available.
 
-When `FatCatCodeWorker setup` is done the repositories that is added to the track repository list.
+## Tasks
 
-## Task
-
-- [ ] on `setup` add the repository it is run in to the repository the app is tracking
-- [ ] Add a `untrack` method that will remove that repository from the app that it is tracking
-- [ ] Add a `list` command line parameter that will list all the repository that are being tracked
-- [ ] On the `untrack` if no other parameter is given it should remove the repository it is run in else it should take a name form the list and remove it.
-- [ ] Add a method called `track` that will run in a repository that is already setup or by name that will add it to the tracked list
+- [ ] Make no code changes
+- [ ] Create a plan and write it to C:\Code\CodeWorker\tasks\todo\01-MoreLogOnDone.md
+- [ ] Add to the plan the verification steps found in this file
 
 ## Required Steps
 
 1. Do all tasks
-2. Run all verification tests
+2. Do all verification steps
 
 ## Verification
 
 - [ ] Tests written before implementation (TDD)
+- [ ] No compiler warnings introduced
+- [ ] Namespaces match folder paths exactly
+- [ ] Must follow all rules `.claude\rules\csharp` no exceptions
+- [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
 - [ ] All tests pass (`dotnet test`)
 - [ ] `dotnet format` run on all modified files
 - [ ] `dotnet build` to apply CSharpier changes
-- [ ] No compiler warnings introduced
-- [ ] Namespaces match folder paths exactly
-- [ ] No banned patterns used (see `.claude/rules/not-allowed.md`)
 - [ ] Report results before finishing
 
 ## References
 
-- Read AI_CONTEXT.md before doing anything. 
+- Read the `README.md` for an overview of the application
+- <!-- Related issue, PR, or ticket -->
+- <!-- Relevant existing classes or files Claude should read first -->
 
 ## Notes
 

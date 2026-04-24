@@ -14,8 +14,18 @@ public class RunCommand(ILoadAppSettings loadAppSettings, IProcessRepository pro
 
 		var settings = await loadAppSettings.Load();
 
+		if (settings.Repositories.Count == 0)
+		{
+			logger.Warning("No repositories configured in app settings");
+		}
+		else
+		{
+			logger.Information("Found {RepositoryCount} repository(ies) to process", settings.Repositories.Count);
+		}
+
 		foreach (var repository in settings.Repositories)
 		{
+			logger.Information("Processing repository {RepositoryPath}", repository.Path);
 			await processRepository.Process(repository, settings.Claude);
 		}
 
