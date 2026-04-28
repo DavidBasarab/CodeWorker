@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run.Outcomes;
 using FatCat.CodeWorker.History;
@@ -17,12 +18,14 @@ public class ProcessTask(
 	IWriteTaskLog writeTaskLog,
 	IClassifyTaskResult classifyTaskResult,
 	IRecordRunHistory recordRunHistory,
+	IRecordRepositoryRunHistory recordRepositoryRunHistory,
 	ITaskOutcomeHandlerFactory outcomeHandlerFactory,
 	ILogger logger
 ) : IProcessTask
 {
 	private TaskExecutionContext context;
 	private TaskExecution task;
+	private long durationMs;
 
 	public async Task<TaskProcessingDecision> Run(TaskExecutionContext executionContext, string taskFile)
 	{
@@ -43,7 +46,10 @@ public class ProcessTask(
 			logger.Information("Task {TaskName} moved to pending", task.TaskName);
 
 			logger.Information("Invoking Claude for {TaskName}", task.TaskName);
+			var stopwatch = Stopwatch.StartNew();
 			task.Result = await runClaude.Run(task.PendingFilePath, context.ClaudeSettings, context.ReferenceFiles);
+			stopwatch.Stop();
+			durationMs = stopwatch.ElapsedMilliseconds;
 			logger.Information(
 				"Claude run returned for {TaskName}: ExitCode={ExitCode}, TimedOut={TimedOut}, FailedToStart={FailedToStart}, OutputLines={OutputLineCount}, ErrorLines={ErrorLineCount}",
 				task.TaskName,
@@ -59,7 +65,10 @@ public class ProcessTask(
 			var outcome = classifyTaskResult.Classify(task.Result);
 			logger.Information("Classified task {TaskName} as {Outcome}", task.TaskName, outcome);
 
+			await WriteTaskLogIfEnabled(outcome);
+
 			await RecordHistory(outcome);
+			await RecordRepositoryHistory(outcome);
 			logger.Information("Recorded run history for {TaskName}", task.TaskName);
 
 			logger.Information("Invoking outcome handler for {Outcome} on {TaskName}", outcome, task.TaskName);
@@ -74,6 +83,16 @@ public class ProcessTask(
 
 			throw;
 		}
+	}
+
+	private async Task WriteTaskLogIfEnabled(TaskOutcome outcome)
+	{
+		if (!context.RepoSettings.LogResults)
+		{
+			return;
+		}
+
+		await writeTaskLog.Write(context, task, outcome);
 	}
 
 	private async Task LogResultIfEnabled()
@@ -95,6 +114,21 @@ public class ProcessTask(
 				TaskName = task.TaskName,
 				Timestamp = DateTime.Now,
 				Success = outcome == TaskOutcome.Done,
+			}
+		);
+	}
+
+	private async Task RecordRepositoryHistory(TaskOutcome outcome)
+	{
+		await recordRepositoryRunHistory.Record(
+			context.Repository.Path,
+			new RepositoryRunHistoryEntry
+			{
+				Timestamp = DateTime.Now,
+				TaskName = task.TaskName,
+				Outcome = outcome,
+				ExitCode = task.Result.ExitCode,
+				DurationMs = durationMs,
 			}
 		);
 	}

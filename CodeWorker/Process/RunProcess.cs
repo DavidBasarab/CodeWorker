@@ -83,7 +83,7 @@ public class RunProcess(ILogger logger) : IRunProcess
 			RedirectStandardError = true,
 			UseShellExecute = false,
 			CreateNoWindow = true,
-			RedirectStandardInput = !string.IsNullOrEmpty(settings.StandardInput),
+			RedirectStandardInput = true,
 		};
 	}
 
@@ -144,12 +144,11 @@ public class RunProcess(ILogger logger) : IRunProcess
 
 	private async Task WriteStandardInput(System.Diagnostics.Process process, ProcessSettings settings)
 	{
-		if (string.IsNullOrEmpty(settings.StandardInput))
+		if (!string.IsNullOrEmpty(settings.StandardInput))
 		{
-			return;
+			await process.StandardInput.WriteAsync(settings.StandardInput);
 		}
 
-		await process.StandardInput.WriteAsync(settings.StandardInput);
 		process.StandardInput.Close();
 	}
 

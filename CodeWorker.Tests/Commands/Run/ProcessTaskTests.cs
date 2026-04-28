@@ -13,8 +13,10 @@ public class ProcessTaskTests
 	private readonly IMoveTask moveTask;
 	private readonly IRunClaude runClaude;
 	private readonly ILogTaskResult logTaskResult;
+	private readonly IWriteTaskLog writeTaskLog;
 	private readonly IClassifyTaskResult classifyTaskResult;
 	private readonly IRecordRunHistory recordRunHistory;
+	private readonly IRecordRepositoryRunHistory recordRepositoryRunHistory;
 	private readonly ITaskOutcomeHandlerFactory outcomeHandlerFactory;
 	private readonly ITaskOutcomeHandler outcomeHandler;
 	private readonly ILogger logger;
@@ -30,8 +32,10 @@ public class ProcessTaskTests
 		moveTask = A.Fake<IMoveTask>();
 		runClaude = A.Fake<IRunClaude>();
 		logTaskResult = A.Fake<ILogTaskResult>();
+		writeTaskLog = A.Fake<IWriteTaskLog>();
 		classifyTaskResult = A.Fake<IClassifyTaskResult>();
 		recordRunHistory = A.Fake<IRecordRunHistory>();
+		recordRepositoryRunHistory = A.Fake<IRecordRepositoryRunHistory>();
 		outcomeHandlerFactory = A.Fake<ITaskOutcomeHandlerFactory>();
 		outcomeHandler = A.Fake<ITaskOutcomeHandler>();
 		logger = A.Fake<ILogger>();
@@ -64,7 +68,11 @@ public class ProcessTaskTests
 		A.CallTo(() => classifyTaskResult.Classify(A<ProcessResult>._)).ReturnsLazily(() => currentOutcome);
 		A.CallTo(() => logTaskResult.Log(A<string>._, A<string>._, A<ProcessResult>._, A<List<ReferenceFile>>._))
 			.Returns(Task.CompletedTask);
+		A.CallTo(() => writeTaskLog.Write(A<TaskExecutionContext>._, A<TaskExecution>._, A<TaskOutcome>._))
+			.Returns(Task.CompletedTask);
 		A.CallTo(() => recordRunHistory.Record(A<RunHistoryEntry>._)).Returns(Task.CompletedTask);
+		A.CallTo(() => recordRepositoryRunHistory.Record(A<string>._, A<RepositoryRunHistoryEntry>._))
+			.Returns(Task.CompletedTask);
 		A.CallTo(() => outcomeHandlerFactory.For(A<TaskOutcome>._)).Returns(outcomeHandler);
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 			.ReturnsLazily(() => Task.FromResult(outcomeDecision));
@@ -73,8 +81,10 @@ public class ProcessTaskTests
 			moveTask,
 			runClaude,
 			logTaskResult,
+			writeTaskLog,
 			classifyTaskResult,
 			recordRunHistory,
+			recordRepositoryRunHistory,
 			outcomeHandlerFactory,
 			logger
 		);
@@ -273,5 +283,140 @@ public class ProcessTaskTests
 				A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 					.MustHaveHappenedOnceExactly()
 			);
+	}
+
+	[Fact]
+	public async Task CallWriteTaskLogWhenLogResultsIsEnabled()
+	{
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				writeTaskLog.Write(context, A<TaskExecution>.That.Matches(t => t.TaskName == "01_MyTask.md"), A<TaskOutcome>._)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task DoNotCallWriteTaskLogWhenLogResultsIsDisabled()
+	{
+		context.RepoSettings.LogResults = false;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => writeTaskLog.Write(A<TaskExecutionContext>._, A<TaskExecution>._, A<TaskOutcome>._))
+			.MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task CallWriteTaskLogWithTheClassifiedOutcome()
+	{
+		currentOutcome = TaskOutcome.Blocked;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => writeTaskLog.Write(A<TaskExecutionContext>._, A<TaskExecution>._, TaskOutcome.Blocked))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task CallWriteTaskLogBeforeTheOutcomeHandlerRuns()
+	{
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => writeTaskLog.Write(A<TaskExecutionContext>._, A<TaskExecution>._, A<TaskOutcome>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(
+				A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
+					.MustHaveHappenedOnceExactly()
+			);
+	}
+
+	[Fact]
+	public async Task RecordTheRepositoryRunHistoryForDoneTasks()
+	{
+		currentOutcome = TaskOutcome.Done;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				recordRepositoryRunHistory.Record(
+					@"C:\Projects\my-api",
+					A<RepositoryRunHistoryEntry>.That.Matches(e => e.Outcome == TaskOutcome.Done)
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task RecordTheRepositoryRunHistoryForBlockedTasks()
+	{
+		currentOutcome = TaskOutcome.Blocked;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				recordRepositoryRunHistory.Record(
+					A<string>._,
+					A<RepositoryRunHistoryEntry>.That.Matches(e => e.Outcome == TaskOutcome.Blocked)
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task RecordTheRepositoryRunHistoryForFailedTasks()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				recordRepositoryRunHistory.Record(
+					A<string>._,
+					A<RepositoryRunHistoryEntry>.That.Matches(e => e.Outcome == TaskOutcome.Failed)
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task IncludeTheTaskNameInRepositoryHistory()
+	{
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				recordRepositoryRunHistory.Record(
+					A<string>._,
+					A<RepositoryRunHistoryEntry>.That.Matches(e => e.TaskName == "01_MyTask.md")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task IncludeTheExitCodeInRepositoryHistory()
+	{
+		claudeResult = new ProcessResult { ExitCode = 42 };
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				recordRepositoryRunHistory.Record(A<string>._, A<RepositoryRunHistoryEntry>.That.Matches(e => e.ExitCode == 42))
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task IncludeDurationInRepositoryHistory()
+	{
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() =>
+				recordRepositoryRunHistory.Record(
+					A<string>._,
+					A<RepositoryRunHistoryEntry>.That.Matches(e => e.DurationMs >= 0)
+				)
+			)
+			.MustHaveHappenedOnceExactly();
 	}
 }

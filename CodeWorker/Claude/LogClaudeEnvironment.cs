@@ -17,7 +17,6 @@ public class LogClaudeEnvironment(IRunProcess runProcess, ILogger logger) : ILog
 		logger.Information("Collecting Claude environment diagnostics");
 
 		await RunDiagnostic("--version");
-		await RunDiagnostic("doctor");
 	}
 
 	private async Task RunDiagnostic(string arguments)
