@@ -217,6 +217,46 @@ public class ClaudeRunnerTests
 	}
 
 	[Fact]
+	public async Task IncludeVerboseFlagWhenOutputFormatIsStreamJson()
+	{
+		claudeSettings.OutputFormat = "stream-json";
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().Contain("--verbose");
+	}
+
+	[Fact]
+	public async Task NotIncludeVerboseFlagWhenOutputFormatIsJson()
+	{
+		claudeSettings.OutputFormat = "json";
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().NotContain("--verbose");
+	}
+
+	[Fact]
+	public async Task NotIncludeVerboseFlagWhenOutputFormatIsText()
+	{
+		claudeSettings.OutputFormat = "text";
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().NotContain("--verbose");
+	}
+
+	[Fact]
+	public async Task NotIncludeVerboseFlagWhenOutputFormatIsEmpty()
+	{
+		claudeSettings.OutputFormat = "";
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.Arguments.Should().NotContain("--verbose");
+	}
+
+	[Fact]
 	public async Task IncludeSystemPromptFlagWhenSystemPromptFileIsSet()
 	{
 		claudeSettings.SystemPromptFile = "prompt.md";
@@ -404,5 +444,13 @@ public class ClaudeRunnerTests
 		args.Should().Contain("context content");
 		args.Should().Contain("schema.md");
 		args.Should().Contain("schema content");
+	}
+
+	[Fact]
+	public async Task PassLiveLogPathDerivedFromMarkdownFile()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedSettings.LiveLogPath.Should().Be(@"C:\Tasks\some-task.live.log");
 	}
 }

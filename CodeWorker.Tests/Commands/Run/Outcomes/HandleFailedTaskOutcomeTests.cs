@@ -76,4 +76,34 @@ public class HandleFailedTaskOutcomeTests
 
 		decision.Should().Be(TaskProcessingDecision.Continue);
 	}
+
+	[Fact]
+	public async Task LogBeforeMove()
+	{
+		await handler.Handle(context, task);
+
+		A.CallTo(() =>
+				logger.Information(
+					A<string>.That.Contains("Handling Failed outcome"),
+					A<string>.That.Contains("01_MyTask.md"),
+					A<string>.That.Contains("failed")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task LogAfterMove()
+	{
+		await handler.Handle(context, task);
+
+		A.CallTo(() =>
+				logger.Information(
+					A<string>.That.Contains("Moved"),
+					A<string>.That.Contains("01_MyTask.md"),
+					A<string>.That.Contains("failed")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
 }

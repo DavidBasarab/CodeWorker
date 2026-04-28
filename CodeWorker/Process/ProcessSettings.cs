@@ -11,4 +11,6 @@ public class ProcessSettings
 	public int TimeoutMilliseconds { get; set; }
 
 	public string StandardInput { get; set; }
+
+	public string LiveLogPath { get; set; }
 }

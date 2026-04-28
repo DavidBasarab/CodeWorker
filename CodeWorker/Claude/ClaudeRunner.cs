@@ -20,6 +20,7 @@ public class ClaudeRunner(
 ) : IRunClaude
 {
 	private StringBuilder arguments;
+	private string referenceContent;
 
 	public async Task<ProcessResult> Run(
 		string markdownFilePath,
@@ -38,7 +39,10 @@ public class ClaudeRunner(
 			Arguments = argumentString,
 			StandardInput = promptContent,
 			TimeoutMilliseconds = claudeSettings.TimeoutMinutes > 0 ? claudeSettings.TimeoutMinutes * 60 * 1000 : 0,
+			LiveLogPath = BuildLiveLogPath(markdownFilePath),
 		};
+
+		LogClaudeInvocation(settings, referenceFiles);
 
 		var result = await runProcess.Run(settings);
 
@@ -66,14 +70,48 @@ public class ClaudeRunner(
 		);
 	}
 
+	private void LogClaudeInvocation(ProcessSettings settings, List<ReferenceFile> referenceFiles)
+	{
+		logger.Information("Claude command: {FileName} {Arguments}", settings.FileName, settings.Arguments);
+
+		logger.Information("Claude stdin length: {StdinLength} chars", settings.StandardInput?.Length ?? 0);
+
+		logger.Information(
+			"Claude reference files: {Count}, total reference prompt length: {Length}",
+			referenceFiles?.Count ?? 0,
+			referenceContent?.Length ?? 0
+		);
+	}
+
+	private string BuildLiveLogPath(string markdownFilePath)
+	{
+		if (string.IsNullOrEmpty(markdownFilePath))
+		{
+			return null;
+		}
+
+		var directory = Path.GetDirectoryName(markdownFilePath);
+		var withoutExtension = Path.GetFileNameWithoutExtension(markdownFilePath);
+		var fileName = $"{withoutExtension}.live.log";
+
+		if (string.IsNullOrEmpty(directory))
+		{
+			return fileName;
+		}
+
+		return Path.Combine(directory, fileName);
+	}
+
 	private string BuildArguments(ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles)
 	{
 		arguments = new StringBuilder();
+		referenceContent = null;
 
 		AppendPrintFlag();
 		AppendModel(claudeSettings);
 		AppendMaxTurns(claudeSettings);
 		AppendOutputFormat(claudeSettings);
+		AppendVerboseFlagForStreamJson(claudeSettings);
 		AppendSystemPromptFile(claudeSettings);
 		AppendSkipPermissions(claudeSettings);
 		AppendAllowedTools(claudeSettings);
@@ -111,6 +149,14 @@ public class ClaudeRunner(
 		}
 	}
 
+	private void AppendVerboseFlagForStreamJson(ClaudeSettings claudeSettings)
+	{
+		if (claudeSettings.OutputFormat == "stream-json")
+		{
+			arguments.Append(" --verbose");
+		}
+	}
+
 	private void AppendSystemPromptFile(ClaudeSettings claudeSettings)
 	{
 		if (!string.IsNullOrEmpty(claudeSettings.SystemPromptFile))
@@ -142,7 +188,7 @@ public class ClaudeRunner(
 	{
 		if (referenceFiles is { Count: > 0 })
 		{
-			var referenceContent = buildReferenceSystemPrompt.Build(referenceFiles);
+			referenceContent = buildReferenceSystemPrompt.Build(referenceFiles);
 
 			arguments.Append($" --append-system-prompt \"{referenceContent}\"");
 		}
