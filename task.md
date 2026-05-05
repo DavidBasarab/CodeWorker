@@ -1,17 +1,21 @@
 # Task
 
-When running a task and the task is completed write a .log file that references the name of the task that shows the output from claude and any information that is available.
+Create a plan that will remove the live.log from pending when a task is done nad follow into the done folder. I also want the logs in the done folder to have an option to determine the correct path.  By default it should go to a /logs folder but can be overridden in the settings.
+
+## Feature Context
+
+Making the repository be ready to work.
 
 ## Tasks
 
-- [ ] Make no code changes
-- [ ] Create a plan and write it to C:\Code\CodeWorker\tasks\todo\01-MoreLogOnDone.md
-- [ ] Add to the plan the verification steps found in this file
+- [ ] Do no code changes
+- [ ] Create a task plan in `C:\Code\CodeWorker\tasks\todo` look the number in the /done folder and go up by 1 for each task
+- [ ] Create a task for moving the live log
+- [ ] Include the ## Verification steps in the task plan
 
 ## Required Steps
 
 1. Do all tasks
-2. Do all verification steps
 
 ## Verification
 

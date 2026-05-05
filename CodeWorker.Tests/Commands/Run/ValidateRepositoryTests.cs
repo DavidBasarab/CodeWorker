@@ -124,6 +124,16 @@ public class ValidateRepositoryTests
 	}
 
 	[Fact]
+	public void ReturnInvalidWhenLogsFolderDoesNotExist()
+	{
+		A.CallTo(() => fileSystemTools.DirectoryExists(A<string>.That.EndsWith("logs"))).Returns(false);
+
+		var result = validateRepository.Validate(repositorySettings);
+
+		result.IsValid.Should().BeFalse();
+	}
+
+	[Fact]
 	public void ReturnInvalidWhenSettingsJsonDoesNotExist()
 	{
 		A.CallTo(() => fileSystemTools.FileExists(A<string>.That.EndsWith("settings.json"))).Returns(false);
@@ -141,7 +151,7 @@ public class ValidateRepositoryTests
 
 		var result = validateRepository.Validate(repositorySettings);
 
-		result.Errors.Should().HaveCount(9);
+		result.Errors.Should().HaveCount(10);
 	}
 
 	[Fact]

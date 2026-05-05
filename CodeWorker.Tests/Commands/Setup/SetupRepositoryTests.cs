@@ -171,4 +171,21 @@ public class SetupRepositoryTests
 
 		A.CallTo(() => readEmbeddedResource.Read("defaultSettings.json")).MustHaveHappenedOnceExactly();
 	}
+
+	[Fact]
+	public async Task CreateTheLogsDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\logs")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteGitKeepToLogsDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\logs\.gitkeep", string.Empty))
+			.MustHaveHappenedOnceExactly();
+	}
 }
