@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.FileSystem;
+using FatCat.Toolkit;
 using Serilog;
 
 namespace FatCat.CodeWorker.Commands.Run;
@@ -8,17 +9,13 @@ public interface IWriteTaskLog
 	Task Write(TaskExecutionContext context, TaskExecution task, TaskOutcome outcome);
 }
 
-public class WriteTaskLog(IWriteFile writeFile, ILogger logger) : IWriteTaskLog
+public class WriteTaskLog(IWriteFile writeFile, IFileSystemTools fileSystemTools, ILogger logger) : IWriteTaskLog
 {
 	public async Task Write(TaskExecutionContext context, TaskExecution task, TaskOutcome outcome)
 	{
-		var destinationFolder = outcome switch
-		{
-			TaskOutcome.Done => context.Folders.Done,
-			TaskOutcome.Blocked => context.Folders.Blocked,
-			TaskOutcome.Failed => context.Folders.Failed,
-			_ => throw new ArgumentOutOfRangeException(nameof(outcome)),
-		};
+		var destinationFolder = context.Folders.Logs;
+
+		fileSystemTools.EnsureDirectory(destinationFolder);
 
 		var logFileName = $"{Path.GetFileNameWithoutExtension(task.TaskName)}.log";
 		var logFilePath = Path.Combine(destinationFolder, logFileName);

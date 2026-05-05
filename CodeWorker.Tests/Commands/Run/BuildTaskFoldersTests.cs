@@ -20,6 +20,7 @@ public class BuildTaskFoldersTests
 			BlockedFolder = "tasks/blocked",
 			FailedFolder = "tasks/failed",
 			ReferenceFolder = "tasks/reference",
+			LogsFolder = "tasks/logs",
 		};
 	}
 
@@ -69,5 +70,13 @@ public class BuildTaskFoldersTests
 		var folders = buildTaskFolders.Build(@"C:\Projects\my-api", tasks);
 
 		folders.Reference.Should().Be(Path.Combine(@"C:\Projects\my-api", "tasks/reference"));
+	}
+
+	[Fact]
+	public void BuildLogsFolderFromRepositoryPath()
+	{
+		var folders = buildTaskFolders.Build(@"C:\Projects\my-api", tasks);
+
+		folders.Logs.Should().Be(Path.Combine(@"C:\Projects\my-api", "tasks/logs"));
 	}
 }

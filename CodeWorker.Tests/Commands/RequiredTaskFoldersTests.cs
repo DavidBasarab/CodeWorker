@@ -41,8 +41,14 @@ public class RequiredTaskFoldersTests
 	}
 
 	[Fact]
-	public void ContainExactlySixFolders()
+	public void ContainLogs()
 	{
-		RequiredTaskFolders.All.Should().HaveCount(6);
+		RequiredTaskFolders.All.Should().Contain("logs");
+	}
+
+	[Fact]
+	public void ContainExactlySevenFolders()
+	{
+		RequiredTaskFolders.All.Should().HaveCount(7);
 	}
 }

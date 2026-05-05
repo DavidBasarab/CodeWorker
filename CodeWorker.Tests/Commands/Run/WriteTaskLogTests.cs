@@ -2,6 +2,7 @@ using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.FileSystem;
 using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
+using FatCat.Toolkit;
 using Serilog;
 
 namespace Testing.FatCat.CodeWorker.Commands.Run;
@@ -9,6 +10,7 @@ namespace Testing.FatCat.CodeWorker.Commands.Run;
 public class WriteTaskLogTests
 {
 	private readonly IWriteFile writeFile;
+	private readonly IFileSystemTools fileSystemTools;
 	private readonly ILogger logger;
 	private readonly WriteTaskLog writeTaskLog;
 	private readonly TaskExecutionContext context;
@@ -17,6 +19,7 @@ public class WriteTaskLogTests
 	public WriteTaskLogTests()
 	{
 		writeFile = A.Fake<IWriteFile>();
+		fileSystemTools = A.Fake<IFileSystemTools>();
 		logger = A.Fake<ILogger>();
 
 		A.CallTo(() => writeFile.Write(A<string>._, A<string>._)).Returns(Task.CompletedTask);
@@ -34,6 +37,7 @@ public class WriteTaskLogTests
 				Blocked = @"C:\Projects\my-api\tasks\blocked",
 				Failed = @"C:\Projects\my-api\tasks\failed",
 				Reference = @"C:\Projects\my-api\tasks\reference",
+				Logs = @"C:\Projects\my-api\tasks\logs",
 			},
 			ReferenceFiles = new List<ReferenceFile>
 			{
@@ -57,42 +61,34 @@ public class WriteTaskLogTests
 			},
 		};
 
-		writeTaskLog = new WriteTaskLog(writeFile, logger);
+		writeTaskLog = new WriteTaskLog(writeFile, fileSystemTools, logger);
 	}
 
 	[Fact]
-	public async Task WriteTheLogFileToTheDoneFolderForADoneOutcome()
+	public async Task WriteTheLogFileToTheLogsFolderForADoneOutcome()
 	{
 		await writeTaskLog.Write(context, task, TaskOutcome.Done);
 
-		A.CallTo(() => writeFile.Write(@"C:\Projects\my-api\tasks\done\05-refactor-run-process.log", A<string>._))
+		A.CallTo(() => writeFile.Write(@"C:\Projects\my-api\tasks\logs\05-refactor-run-process.log", A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task WriteTheLogFileToTheBlockedFolderForABlockedOutcome()
+	public async Task WriteTheLogFileToTheLogsFolderForABlockedOutcome()
 	{
 		await writeTaskLog.Write(context, task, TaskOutcome.Blocked);
 
-		A.CallTo(() => writeFile.Write(@"C:\Projects\my-api\tasks\blocked\05-refactor-run-process.log", A<string>._))
+		A.CallTo(() => writeFile.Write(@"C:\Projects\my-api\tasks\logs\05-refactor-run-process.log", A<string>._))
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task WriteTheLogFileToTheFailedFolderForAFailedOutcome()
+	public async Task WriteTheLogFileToTheLogsFolderForAFailedOutcome()
 	{
 		await writeTaskLog.Write(context, task, TaskOutcome.Failed);
 
-		A.CallTo(() => writeFile.Write(@"C:\Projects\my-api\tasks\failed\05-refactor-run-process.log", A<string>._))
+		A.CallTo(() => writeFile.Write(@"C:\Projects\my-api\tasks\logs\05-refactor-run-process.log", A<string>._))
 			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task ThrowArgumentOutOfRangeForAnUnhandledOutcome()
-	{
-		var act = async () => await writeTaskLog.Write(context, task, (TaskOutcome)999);
-
-		await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
 	}
 
 	[Fact]
@@ -204,9 +200,17 @@ public class WriteTaskLogTests
 				logger.Information(
 					A<string>._,
 					A<string>.That.Contains("05-refactor-run-process.md"),
-					A<string>.That.Contains("done")
+					A<string>.That.Contains("logs")
 				)
 			)
 			.MustHaveHappened();
+	}
+
+	[Fact]
+	public async Task EnsureTheLogsDirectoryExistsBeforeWriting()
+	{
+		await writeTaskLog.Write(context, task, TaskOutcome.Done);
+
+		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\logs")).MustHaveHappenedOnceExactly();
 	}
 }

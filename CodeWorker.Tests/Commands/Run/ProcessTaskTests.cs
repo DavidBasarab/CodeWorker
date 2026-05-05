@@ -14,6 +14,7 @@ public class ProcessTaskTests
 	private readonly IRunClaude runClaude;
 	private readonly ILogTaskResult logTaskResult;
 	private readonly IWriteTaskLog writeTaskLog;
+	private readonly IMoveLiveLog moveLiveLog;
 	private readonly IClassifyTaskResult classifyTaskResult;
 	private readonly IRecordRunHistory recordRunHistory;
 	private readonly IRecordRepositoryRunHistory recordRepositoryRunHistory;
@@ -33,6 +34,7 @@ public class ProcessTaskTests
 		runClaude = A.Fake<IRunClaude>();
 		logTaskResult = A.Fake<ILogTaskResult>();
 		writeTaskLog = A.Fake<IWriteTaskLog>();
+		moveLiveLog = A.Fake<IMoveLiveLog>();
 		classifyTaskResult = A.Fake<IClassifyTaskResult>();
 		recordRunHistory = A.Fake<IRecordRunHistory>();
 		recordRepositoryRunHistory = A.Fake<IRecordRepositoryRunHistory>();
@@ -59,6 +61,7 @@ public class ProcessTaskTests
 				Blocked = @"C:\Projects\my-api\tasks\blocked",
 				Failed = @"C:\Projects\my-api\tasks\failed",
 				Reference = @"C:\Projects\my-api\tasks\reference",
+				Logs = @"C:\Projects\my-api\tasks\logs",
 			},
 			ReferenceFiles = new List<ReferenceFile>(),
 		};
@@ -82,6 +85,7 @@ public class ProcessTaskTests
 			runClaude,
 			logTaskResult,
 			writeTaskLog,
+			moveLiveLog,
 			classifyTaskResult,
 			recordRunHistory,
 			recordRepositoryRunHistory,
@@ -417,6 +421,57 @@ public class ProcessTaskTests
 					A<RepositoryRunHistoryEntry>.That.Matches(e => e.DurationMs >= 0)
 				)
 			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task CallMoveLiveLogAfterTheOutcomeHandlerForDoneTasks()
+	{
+		currentOutcome = TaskOutcome.Done;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(
+				A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+			);
+	}
+
+	[Fact]
+	public async Task CallMoveLiveLogAfterTheOutcomeHandlerForBlockedTasks()
+	{
+		currentOutcome = TaskOutcome.Blocked;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(
+				A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+			);
+	}
+
+	[Fact]
+	public async Task CallMoveLiveLogAfterTheOutcomeHandlerForFailedTasks()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(
+				A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+			);
+	}
+
+	[Fact]
+	public async Task MoveLiveLogReceivesTheSameContextAndTaskAsTheOutcomeHandler()
+	{
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => moveLiveLog.Move(context, A<TaskExecution>.That.Matches(t => t.TaskName == "01_MyTask.md")))
 			.MustHaveHappenedOnceExactly();
 	}
 }

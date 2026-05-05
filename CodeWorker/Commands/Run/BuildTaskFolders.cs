@@ -19,6 +19,7 @@ public class BuildTaskFolders : IBuildTaskFolders
 			Blocked = Path.Combine(repositoryPath, tasks.BlockedFolder),
 			Failed = Path.Combine(repositoryPath, tasks.FailedFolder),
 			Reference = Path.Combine(repositoryPath, tasks.ReferenceFolder),
+			Logs = Path.Combine(repositoryPath, tasks.LogsFolder),
 		};
 	}
 }

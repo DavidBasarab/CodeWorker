@@ -16,6 +16,7 @@ public class ProcessTask(
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
 	IWriteTaskLog writeTaskLog,
+	IMoveLiveLog moveLiveLog,
 	IClassifyTaskResult classifyTaskResult,
 	IRecordRunHistory recordRunHistory,
 	IRecordRepositoryRunHistory recordRepositoryRunHistory,
@@ -74,6 +75,8 @@ public class ProcessTask(
 			logger.Information("Invoking outcome handler for {Outcome} on {TaskName}", outcome, task.TaskName);
 			var decision = await outcomeHandlerFactory.For(outcome).Handle(context, task);
 			logger.Information("Outcome handler complete for {TaskName}", task.TaskName);
+
+			moveLiveLog.Move(context, task);
 
 			return decision;
 		}

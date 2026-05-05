@@ -14,6 +14,8 @@ public class TaskSettings
 
 	public string FailedFolder { get; set; }
 
+	public string LogsFolder { get; set; }
+
 	public bool StopOnBlocked { get; set; }
 
 	public bool StopOnFailed { get; set; }
