@@ -1,3 +1,5 @@
+using FatCat.CodeWorker.Claude;
+
 namespace FatCat.CodeWorker.Process;
 
 public class ProcessResult
@@ -11,4 +13,8 @@ public class ProcessResult
 	public bool TimedOut { get; set; }
 
 	public bool FailedToStart { get; set; }
+
+	public ClaudeStreamEvent ResultEvent { get; set; }
+
+	public TailerStopReason? TailerStopReason { get; set; }
 }

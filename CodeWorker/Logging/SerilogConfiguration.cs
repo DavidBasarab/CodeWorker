@@ -30,7 +30,7 @@ public static class SerilogConfiguration
 				rollOnFileSizeLimit: true,
 				retainedFileCountLimit: 100,
 				formatProvider: new DateTimeLogFormatProvider(),
-				flushToDiskInterval: TimeSpan.FromSeconds(1)
+				flushToDiskInterval: TimeSpan.FromMilliseconds(250)
 			);
 
 		config.MinimumLevel.ControlledBy(LoggingLevelSwitch);

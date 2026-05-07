@@ -16,6 +16,7 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Commands\Setup\TasksReadme.md" />
 		<EmbeddedResource Include="Commands\Setup\defaultSettings.json" />
+		<EmbeddedResource Include="Claude\Scripts\Run-ClaudeTask.ps1" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="appsettings.json">

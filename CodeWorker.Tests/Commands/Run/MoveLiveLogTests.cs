@@ -81,33 +81,73 @@ public class MoveLiveLogTests
 	}
 
 	[Fact]
-	public void LogThatThereWasNoLiveLogToMoveWhenSourceMissing()
-	{
-		fileExists = false;
-
-		moveLiveLog.Move(context, task);
-
-		A.CallTo(() =>
-				logger.Information(
-					A<string>.That.Contains("No live log"),
-					A<string>.That.Contains("05-refactor-run-process.md")
-				)
-			)
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
 	public void LogThatTheLiveLogIsBeingMovedWhenSourceExists()
 	{
 		moveLiveLog.Move(context, task);
 
 		A.CallTo(() =>
 				logger.Information(
-					A<string>.That.Contains("Moving live log"),
+					A<string>.That.Contains("Moving"),
+					A<string>.That.Contains("05-refactor-run-process.live.log"),
 					A<string>.That.Contains("05-refactor-run-process.md"),
 					A<string>.That.Contains(@"logs\05-refactor-run-process.live.log")
 				)
 			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void MoveTheTranscriptFileFromPendingToLogsFolder()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() =>
+				moveFile.Move(
+					@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.transcript.jsonl",
+					@"C:\Projects\my-api\tasks\logs\05-refactor-run-process.transcript.jsonl"
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void MoveTheStderrFileFromPendingToLogsFolder()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() =>
+				moveFile.Move(
+					@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.stderr.log",
+					@"C:\Projects\my-api\tasks\logs\05-refactor-run-process.stderr.log"
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void DeleteTheDoneSentinelAfterMoving()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.done"))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void DeleteThePromptFileAfterMoving()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.prompt.txt"))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void DeleteTheWrapperPidFileAfterMoving()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.wrapper.pid"))
 			.MustHaveHappenedOnceExactly();
 	}
 
@@ -144,15 +184,5 @@ public class MoveLiveLogTests
 		moveLiveLog.Move(context, task);
 
 		A.CallTo(() => fileSystemTools.EnsureDirectory(@"C:\Projects\my-api\tasks\logs")).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public void DoNotEnsureDirectoryWhenTheLiveLogDoesNotExist()
-	{
-		fileExists = false;
-
-		moveLiveLog.Move(context, task);
-
-		A.CallTo(() => fileSystemTools.EnsureDirectory(A<string>._)).MustNotHaveHappened();
 	}
 }

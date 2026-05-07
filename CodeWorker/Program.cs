@@ -1,5 +1,6 @@
 using System.Reflection;
 using Autofac;
+using FatCat.CodeWorker.Logging;
 using FatCat.Toolkit.Console;
 using FatCat.Toolkit.Injection;
 using Serilog;
@@ -12,7 +13,7 @@ public static class Program
 	{
 		ConsoleLog.LogCallerInformation = true;
 
-		AppDomain.CurrentDomain.ProcessExit += (_, _) => Log.CloseAndFlush();
+		TerminationDiagnostics.Install();
 
 		try
 		{

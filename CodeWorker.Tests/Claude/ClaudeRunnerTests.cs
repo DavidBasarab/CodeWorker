@@ -1,6 +1,5 @@
 using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
-using FatCat.CodeWorker.Process;
 using FatCat.CodeWorker.Settings;
 using FatCat.Toolkit;
 using Serilog;
@@ -9,70 +8,96 @@ namespace Testing.FatCat.CodeWorker.Claude;
 
 public class ClaudeRunnerTests
 {
-	private readonly IRunProcess runProcess;
 	private readonly IFileSystemTools fileSystemTools;
 	private readonly IBuildReferenceSystemPrompt buildReferenceSystemPrompt;
+	private readonly ITranscriptPaths transcriptPaths;
+	private readonly IExtractWrapperScript extractWrapperScript;
+	private readonly ILaunchWrapper launchWrapper;
+	private readonly IClaudeTranscriptTailer tailer;
 	private readonly ILogger logger;
 	private readonly ClaudeRunner claudeRunner;
+
 	private readonly string markdownFilePath = @"C:\Tasks\some-task.md";
 	private readonly string markdownFileContent = "# Task\nDo something useful";
+	private readonly TranscriptPaths paths;
 	private readonly List<ReferenceFile> referenceFiles;
-	private ProcessResult processResult;
-	private ProcessSettings capturedSettings;
 	private ClaudeSettings claudeSettings;
+	private TailResult tailResult;
+	private WrapperLaunchSettings capturedLaunchSettings;
+	private TailRequest capturedTailRequest;
 
 	public ClaudeRunnerTests()
 	{
-		runProcess = A.Fake<IRunProcess>();
 		fileSystemTools = A.Fake<IFileSystemTools>();
+		buildReferenceSystemPrompt = A.Fake<IBuildReferenceSystemPrompt>();
+		transcriptPaths = A.Fake<ITranscriptPaths>();
+		extractWrapperScript = A.Fake<IExtractWrapperScript>();
+		launchWrapper = A.Fake<ILaunchWrapper>();
+		tailer = A.Fake<IClaudeTranscriptTailer>();
 		logger = A.Fake<ILogger>();
 
-		var realBuilder = new BuildReferenceSystemPrompt();
-		buildReferenceSystemPrompt = A.Fake<IBuildReferenceSystemPrompt>();
-
-		A.CallTo(() => buildReferenceSystemPrompt.Build(A<List<ReferenceFile>>._))
-			.ReturnsLazily((List<ReferenceFile> files) => realBuilder.Build(files));
-
-		A.CallTo(() => fileSystemTools.ReadAllText(markdownFilePath)).Returns(Task.FromResult(markdownFileContent));
-
-		processResult = new ProcessResult
+		paths = new TranscriptPaths
 		{
-			ExitCode = 0,
-			OutputLines = new List<string> { "Claude output line 1", "Claude output line 2" },
+			TaskName = "some-task.md",
+			PromptFile = @"C:\Tasks\some-task.prompt.txt",
+			TranscriptFile = @"C:\Tasks\some-task.transcript.jsonl",
+			StderrFile = @"C:\Tasks\some-task.stderr.log",
+			DoneSentinel = @"C:\Tasks\some-task.done",
+			PidFile = @"C:\Tasks\some-task.wrapper.pid",
+			LiveLogFile = @"C:\Tasks\some-task.live.log",
 		};
 
-		A.CallTo(() => runProcess.Run(A<ProcessSettings>._))
-			.ReturnsLazily(
-				(ProcessSettings settings) =>
-				{
-					capturedSettings = settings;
-
-					return Task.FromResult(processResult);
-				}
-			);
+		referenceFiles = new List<ReferenceFile>();
 
 		claudeSettings = new ClaudeSettings
 		{
 			Model = "",
 			MaxTurns = 0,
 			SkipPermissions = false,
-			OutputFormat = "",
+			OutputFormat = "stream-json",
 			SystemPromptFile = "",
 			AllowedTools = new List<string>(),
 			TimeoutMinutes = 0,
 		};
 
-		referenceFiles = new List<ReferenceFile>();
+		tailResult = new TailResult { StopReason = TailerStopReason.OrchestratorDone, ExitCode = 0 };
 
-		claudeRunner = new ClaudeRunner(runProcess, fileSystemTools, buildReferenceSystemPrompt, logger);
-	}
+		A.CallTo(() => fileSystemTools.ReadAllText(markdownFilePath)).Returns(Task.FromResult(markdownFileContent));
+		A.CallTo(() => fileSystemTools.FileExists(A<string>._)).Returns(false);
+		A.CallTo(() => transcriptPaths.For(markdownFilePath)).Returns(paths);
+		A.CallTo(() => extractWrapperScript.Extract()).Returns(@"C:\Temp\Run-ClaudeTask.ps1");
 
-	[Fact]
-	public async Task PassClaudeAsTheFileName()
-	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+		A.CallTo(() => launchWrapper.Launch(A<WrapperLaunchSettings>._))
+			.ReturnsLazily(
+				(WrapperLaunchSettings settings) =>
+				{
+					capturedLaunchSettings = settings;
 
-		capturedSettings.FileName.Should().Be("claude");
+					return 12345;
+				}
+			);
+
+		A.CallTo(() => tailer.Tail(A<TailRequest>._, A<ClaudeProgressTracker>._))
+			.ReturnsLazily(
+				(TailRequest request, ClaudeProgressTracker tracker) =>
+				{
+					capturedTailRequest = request;
+
+					return Task.FromResult(tailResult);
+				}
+			);
+
+		A.CallTo(() => buildReferenceSystemPrompt.Build(A<List<ReferenceFile>>._)).Returns("ref-content");
+
+		claudeRunner = new ClaudeRunner(
+			fileSystemTools,
+			buildReferenceSystemPrompt,
+			transcriptPaths,
+			extractWrapperScript,
+			launchWrapper,
+			tailer,
+			logger
+		);
 	}
 
 	[Fact]
@@ -84,27 +109,280 @@ public class ClaudeRunnerTests
 	}
 
 	[Fact]
-	public async Task PassFileContentAsStandardInput()
+	public async Task WriteThePromptFileForTheWrapper()
 	{
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedSettings.StandardInput.Should().Be(markdownFileContent);
+		A.CallTo(() => fileSystemTools.WriteAllText(paths.PromptFile, markdownFileContent)).MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task IncludePrintFlagInArguments()
+	public async Task ClearStaleTranscriptBeforeRunning()
 	{
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedSettings.Arguments.Should().Contain("-p");
+		A.CallTo(() => fileSystemTools.DeleteFile(paths.TranscriptFile)).MustHaveHappened();
 	}
 
 	[Fact]
-	public async Task ReturnTheProcessResult()
+	public async Task ClearStaleStderrBeforeRunning()
 	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(paths.StderrFile)).MustHaveHappened();
+	}
+
+	[Fact]
+	public async Task ClearStaleDoneSentinelBeforeRunning()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(paths.DoneSentinel)).MustHaveHappened();
+	}
+
+	[Fact]
+	public async Task ExtractTheWrapperScript()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		A.CallTo(() => extractWrapperScript.Extract()).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task LaunchTheWrapperWithTheExtractedScript()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ScriptPath.Should().Be(@"C:\Temp\Run-ClaudeTask.ps1");
+	}
+
+	[Fact]
+	public async Task LaunchTheWrapperWithTheCorrectPromptFile()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.PromptFile.Should().Be(paths.PromptFile);
+	}
+
+	[Fact]
+	public async Task LaunchTheWrapperWithTheCorrectTranscriptFile()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.TranscriptFile.Should().Be(paths.TranscriptFile);
+	}
+
+	[Fact]
+	public async Task LaunchTheWrapperWithTheCorrectDoneSentinel()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.DoneSentinel.Should().Be(paths.DoneSentinel);
+	}
+
+	[Fact]
+	public async Task IncludeModelInClaudeArgsWhenSet()
+	{
+		claudeSettings.Model = "claude-opus-4-6";
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("--model");
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("claude-opus-4-6");
+	}
+
+	[Fact]
+	public async Task NotIncludeModelArgWhenEmpty()
+	{
+		claudeSettings.Model = "";
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--model");
+	}
+
+	[Fact]
+	public async Task IncludeMaxTurnsInClaudeArgsWhenSet()
+	{
+		claudeSettings.MaxTurns = 25;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("--max-turns");
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("25");
+	}
+
+	[Fact]
+	public async Task NotIncludeMaxTurnsArgWhenZero()
+	{
+		claudeSettings.MaxTurns = 0;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--max-turns");
+	}
+
+	[Fact]
+	public async Task IncludeSkipPermissionsArgWhenTrue()
+	{
+		claudeSettings.SkipPermissions = true;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("--dangerously-skip-permissions");
+	}
+
+	[Fact]
+	public async Task NotIncludeSkipPermissionsArgWhenFalse()
+	{
+		claudeSettings.SkipPermissions = false;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--dangerously-skip-permissions");
+	}
+
+	[Fact]
+	public async Task IncludeAllowedToolsArgsWhenSet()
+	{
+		claudeSettings.AllowedTools = new List<string> { "Read", "Write" };
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("Read");
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("Write");
+	}
+
+	[Fact]
+	public async Task IncludeAppendSystemPromptWhenReferenceFilesExist()
+	{
+		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "context content" });
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().Contain("--append-system-prompt");
+	}
+
+	[Fact]
+	public async Task NotIncludeAppendSystemPromptWhenReferenceFilesEmpty()
+	{
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--append-system-prompt");
+	}
+
+	[Fact]
+	public async Task PassWallClockTimeoutFromTimeoutMinutes()
+	{
+		claudeSettings.TimeoutMinutes = 30;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedTailRequest.WallClockTimeout.Should().Be(TimeSpan.FromMinutes(30));
+	}
+
+	[Fact]
+	public async Task DefaultIdleTimeoutWhenSettingIsZero()
+	{
+		claudeSettings.IdleTimeoutMinutes = 0;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedTailRequest.IdleTimeout.Should().Be(TimeSpan.FromMinutes(10));
+	}
+
+	[Fact]
+	public async Task UseConfiguredIdleTimeoutWhenSet()
+	{
+		claudeSettings.IdleTimeoutMinutes = 5;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedTailRequest.IdleTimeout.Should().Be(TimeSpan.FromMinutes(5));
+	}
+
+	[Fact]
+	public async Task DefaultPollIntervalWhenSettingIsZero()
+	{
+		claudeSettings.TranscriptPollMilliseconds = 0;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedTailRequest.PollInterval.Should().Be(TimeSpan.FromMilliseconds(250));
+	}
+
+	[Fact]
+	public async Task UseConfiguredPollIntervalWhenSet()
+	{
+		claudeSettings.TranscriptPollMilliseconds = 1000;
+
+		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		capturedTailRequest.PollInterval.Should().Be(TimeSpan.FromMilliseconds(1000));
+	}
+
+	[Fact]
+	public async Task ReturnExitCodeFromTailResult()
+	{
+		tailResult.ExitCode = 42;
+		tailResult.OrchestratorDoneEvent = new ClaudeStreamEvent { ExitCode = 42, Kind = ClaudeEventKind.OrchestratorDone };
+
 		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		result.Should().BeSameAs(processResult);
+		result.ExitCode.Should().Be(42);
+	}
+
+	[Fact]
+	public async Task SetTimedOutWhenTailerHitsWallClockTimeout()
+	{
+		tailResult.StopReason = TailerStopReason.WallClockTimeout;
+		tailResult.ExitCode = -1;
+
+		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		result.TimedOut.Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task SetTimedOutWhenTailerHitsIdleTimeout()
+	{
+		tailResult.StopReason = TailerStopReason.IdleTimeout;
+		tailResult.ExitCode = -1;
+
+		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		result.TimedOut.Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task NotSetTimedOutWhenOrchestratorDone()
+	{
+		tailResult.StopReason = TailerStopReason.OrchestratorDone;
+
+		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		result.TimedOut.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task PassResultEventThroughOnProcessResult()
+	{
+		var resultEvent = new ClaudeStreamEvent { Kind = ClaudeEventKind.Result, Subtype = "success" };
+		tailResult.ResultEvent = resultEvent;
+
+		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		result.ResultEvent.Should().BeSameAs(resultEvent);
+	}
+
+	[Fact]
+	public async Task PassTailerStopReasonThroughOnProcessResult()
+	{
+		tailResult.StopReason = TailerStopReason.IdleTimeout;
+
+		var result = await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
+
+		result.TailerStopReason.Should().Be(TailerStopReason.IdleTimeout);
 	}
 
 	[Fact]
@@ -117,340 +395,13 @@ public class ClaudeRunnerTests
 	}
 
 	[Fact]
-	public async Task LogTheExitCode()
-	{
-		processResult.ExitCode = 42;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		A.CallTo(() => logger.Information("Claude exited with code {ExitCode}", 42)).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
 	public async Task LogWarningWhenExitCodeIsNotZero()
 	{
-		processResult.ExitCode = 1;
+		tailResult.ExitCode = 1;
+		tailResult.OrchestratorDoneEvent = new ClaudeStreamEvent { ExitCode = 1, Kind = ClaudeEventKind.OrchestratorDone };
 
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
 		A.CallTo(() => logger.Warning("Claude exited with non-zero exit code {ExitCode}", 1)).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task NotLogWarningWhenExitCodeIsZero()
-	{
-		processResult.ExitCode = 0;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		A.CallTo(() => logger.Warning(A<string>._, A<int>._)).MustNotHaveHappened();
-	}
-
-	[Fact]
-	public async Task IncludeModelFlagWhenModelIsSet()
-	{
-		claudeSettings.Model = "claude-sonnet-4-6";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--model claude-sonnet-4-6");
-	}
-
-	[Fact]
-	public async Task NotIncludeModelFlagWhenModelIsEmpty()
-	{
-		claudeSettings.Model = "";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--model");
-	}
-
-	[Fact]
-	public async Task NotIncludeModelFlagWhenModelIsNull()
-	{
-		claudeSettings.Model = null;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--model");
-	}
-
-	[Fact]
-	public async Task IncludeMaxTurnsFlagWhenMaxTurnsIsSet()
-	{
-		claudeSettings.MaxTurns = 25;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--max-turns 25");
-	}
-
-	[Fact]
-	public async Task NotIncludeMaxTurnsFlagWhenMaxTurnsIsZero()
-	{
-		claudeSettings.MaxTurns = 0;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--max-turns");
-	}
-
-	[Fact]
-	public async Task IncludeOutputFormatFlagWhenOutputFormatIsSet()
-	{
-		claudeSettings.OutputFormat = "json";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--output-format json");
-	}
-
-	[Fact]
-	public async Task NotIncludeOutputFormatFlagWhenOutputFormatIsEmpty()
-	{
-		claudeSettings.OutputFormat = "";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--output-format");
-	}
-
-	[Fact]
-	public async Task IncludeVerboseFlagWhenOutputFormatIsStreamJson()
-	{
-		claudeSettings.OutputFormat = "stream-json";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--verbose");
-	}
-
-	[Fact]
-	public async Task NotIncludeVerboseFlagWhenOutputFormatIsJson()
-	{
-		claudeSettings.OutputFormat = "json";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--verbose");
-	}
-
-	[Fact]
-	public async Task NotIncludeVerboseFlagWhenOutputFormatIsText()
-	{
-		claudeSettings.OutputFormat = "text";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--verbose");
-	}
-
-	[Fact]
-	public async Task NotIncludeVerboseFlagWhenOutputFormatIsEmpty()
-	{
-		claudeSettings.OutputFormat = "";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--verbose");
-	}
-
-	[Fact]
-	public async Task IncludeSystemPromptFlagWhenSystemPromptFileIsSet()
-	{
-		claudeSettings.SystemPromptFile = "prompt.md";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--system-prompt \"prompt.md\"");
-	}
-
-	[Fact]
-	public async Task NotIncludeSystemPromptFlagWhenSystemPromptFileIsEmpty()
-	{
-		claudeSettings.SystemPromptFile = "";
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--system-prompt");
-	}
-
-	[Fact]
-	public async Task IncludeDangerouslySkipPermissionsFlagWhenTrue()
-	{
-		claudeSettings.SkipPermissions = true;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--dangerously-skip-permissions");
-	}
-
-	[Fact]
-	public async Task NotIncludeDangerouslySkipPermissionsFlagWhenFalse()
-	{
-		claudeSettings.SkipPermissions = false;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--dangerously-skip-permissions");
-	}
-
-	[Fact]
-	public async Task IncludeAllowedToolsFlagsWhenToolsAreSet()
-	{
-		claudeSettings.AllowedTools = new List<string> { "Read", "Write" };
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--allowedTools \"Read\"");
-		capturedSettings.Arguments.Should().Contain("--allowedTools \"Write\"");
-	}
-
-	[Fact]
-	public async Task NotIncludeAllowedToolsFlagWhenToolsListIsEmpty()
-	{
-		claudeSettings.AllowedTools = new List<string>();
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--allowedTools");
-	}
-
-	[Fact]
-	public async Task NotIncludeAllowedToolsFlagWhenToolsListIsNull()
-	{
-		claudeSettings.AllowedTools = null;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--allowedTools");
-	}
-
-	[Fact]
-	public async Task SetTimeoutMillisecondsFromTimeoutMinutes()
-	{
-		claudeSettings.TimeoutMinutes = 30;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.TimeoutMilliseconds.Should().Be(30 * 60 * 1000);
-	}
-
-	[Fact]
-	public async Task NotSetTimeoutWhenTimeoutMinutesIsZero()
-	{
-		claudeSettings.TimeoutMinutes = 0;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.TimeoutMilliseconds.Should().Be(0);
-	}
-
-	[Fact]
-	public async Task LogEffectiveSettings()
-	{
-		claudeSettings.Model = "claude-sonnet-4-6";
-		claudeSettings.MaxTurns = 15;
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		A.CallTo(() =>
-				logger.Information(
-					"Claude settings: Model={Model}, MaxTurns={MaxTurns}, SkipPermissions={SkipPermissions}, OutputFormat={OutputFormat}, TimeoutMinutes={TimeoutMinutes}",
-					A<object[]>._
-				)
-			)
-			.MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task BuildCompleteArgumentsWithAllSettings()
-	{
-		claudeSettings = new ClaudeSettings
-		{
-			Model = "claude-opus-4-6",
-			MaxTurns = 10,
-			SkipPermissions = true,
-			OutputFormat = "json",
-			SystemPromptFile = "system.md",
-			AllowedTools = new List<string> { "Read" },
-			TimeoutMinutes = 30,
-		};
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		var args = capturedSettings.Arguments;
-
-		args.Should().Contain("-p");
-		args.Should().NotContain("--input-file");
-		args.Should().Contain("--model claude-opus-4-6");
-		args.Should().Contain("--max-turns 10");
-		args.Should().Contain("--output-format json");
-		args.Should().Contain("--system-prompt \"system.md\"");
-		args.Should().Contain("--dangerously-skip-permissions");
-		args.Should().Contain("--allowedTools \"Read\"");
-	}
-
-	[Fact]
-	public async Task IncludeAppendSystemPromptWhenReferenceFilesExist()
-	{
-		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "some context" });
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("--append-system-prompt");
-	}
-
-	[Fact]
-	public async Task NotIncludeAppendSystemPromptWhenReferenceFilesAreEmpty()
-	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().NotContain("--append-system-prompt");
-	}
-
-	[Fact]
-	public async Task IncludeReferenceFileNameInAppendSystemPrompt()
-	{
-		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "some context" });
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("context.md");
-	}
-
-	[Fact]
-	public async Task IncludeReferenceFileContentInAppendSystemPrompt()
-	{
-		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "important context here" });
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.Arguments.Should().Contain("important context here");
-	}
-
-	[Fact]
-	public async Task IncludeMultipleReferenceFilesInAppendSystemPrompt()
-	{
-		referenceFiles.Add(new ReferenceFile { Name = "context.md", Content = "context content" });
-		referenceFiles.Add(new ReferenceFile { Name = "schema.md", Content = "schema content" });
-
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		var args = capturedSettings.Arguments;
-
-		args.Should().Contain("context.md");
-		args.Should().Contain("context content");
-		args.Should().Contain("schema.md");
-		args.Should().Contain("schema content");
-	}
-
-	[Fact]
-	public async Task PassLiveLogPathDerivedFromMarkdownFile()
-	{
-		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
-
-		capturedSettings.LiveLogPath.Should().Be(@"C:\Tasks\some-task.live.log");
 	}
 }

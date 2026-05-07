@@ -11,23 +11,48 @@ public interface IMoveLiveLog
 
 public class MoveLiveLog(IMoveFile moveFile, IFileSystemTools fileSystemTools, ILogger logger) : IMoveLiveLog
 {
+	private static readonly string[] Suffixes = [".live.log", ".transcript.jsonl", ".stderr.log"];
+
+	private static readonly string[] CleanupSuffixes = [".prompt.txt", ".done", ".wrapper.pid"];
+
 	public void Move(TaskExecutionContext context, TaskExecution task)
 	{
 		var baseFileName = Path.GetFileNameWithoutExtension(task.TaskName);
-		var liveLogFileName = $"{baseFileName}.live.log";
-		var sourcePath = Path.Combine(context.Folders.Pending, liveLogFileName);
-		var destinationPath = Path.Combine(context.Folders.Logs, liveLogFileName);
+		var destinationFolder = context.Folders.Logs;
+
+		fileSystemTools.EnsureDirectory(destinationFolder);
+
+		foreach (var suffix in Suffixes)
+		{
+			MoveOne(baseFileName, suffix, context.Folders.Pending, destinationFolder, task.TaskName);
+		}
+
+		foreach (var suffix in CleanupSuffixes)
+		{
+			DeleteOne(baseFileName, suffix, context.Folders.Pending);
+		}
+	}
+
+	private void MoveOne(string baseFileName, string suffix, string sourceFolder, string destinationFolder, string taskName)
+	{
+		var fileName = $"{baseFileName}{suffix}";
+		var sourcePath = Path.Combine(sourceFolder, fileName);
+		var destinationPath = Path.Combine(destinationFolder, fileName);
 
 		if (!fileSystemTools.FileExists(sourcePath))
 		{
-			logger.Information("No live log to move for {TaskName}", task.TaskName);
-
 			return;
 		}
 
-		logger.Information("Moving live log for {TaskName} to {DestinationPath}", task.TaskName, destinationPath);
+		logger.Information("Moving {FileName} for {TaskName} to {DestinationPath}", fileName, taskName, destinationPath);
 
-		fileSystemTools.EnsureDirectory(context.Folders.Logs);
 		moveFile.Move(sourcePath, destinationPath);
+	}
+
+	private void DeleteOne(string baseFileName, string suffix, string sourceFolder)
+	{
+		var sourcePath = Path.Combine(sourceFolder, $"{baseFileName}{suffix}");
+
+		fileSystemTools.DeleteFile(sourcePath);
 	}
 }
