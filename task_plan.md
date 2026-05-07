@@ -1,302 +1,200 @@
-# Stall Kill-Switch For Silent Claude Runs
+# Plan: Survive Parent-Process Death And Reliably Capture Claude's Work
 
-## Background
+## What Actually Happened
 
-A recent run showed the Claude child process producing **zero bytes** on stdout and stderr for 4+ minutes while the heartbeat kept firing:
+Re-reading the run with the corrected fact that **the user did not kill anything**:
+
+- `21:27:26.282` — child Claude PID 58388 started.
+- `21:27:56 / 21:28:26 / 21:28:56` — three 30s heartbeats fired, each reporting `stdoutBytes=0, stderrBytes=0`.
+- `21:28:56` — last log line. Both console *and* the Serilog file log end here.
+- `~21:29:26` — shell prompt returns showing total dotnet runtime `2m 0.025s`.
+- **No** `Process exited` log. **No** `Claude exited with code` log. **No** `Task runner complete` log. **No** exception printed by `Program.Main`'s catch. **No** Serilog `CloseAndFlush` aftermath even though `Program.Main` registers it on `AppDomain.CurrentDomain.ProcessExit` and Serilog's file sink flushes every 1s.
+
+That pattern means the .NET host did not unwind `Program.Main` at all. It died abnormally — a native crash (`StackOverflowException`, `AccessViolationException`), an `Environment.FailFast`, a `CTRL_CLOSE_EVENT`-style console signal, or an external kill (AV, OS, Task Manager). We do not currently know which, because we have **no diagnostics installed for any of those paths**.
+
+Meanwhile the child `claude` process probably continued (Windows children with `UseShellExecute=false` are not auto-killed when the parent dies), eventually finished or got reaped, and its output went to `/dev/null` because the only consumer was the now-dead .NET process's stdout pipe. That is why the live log is 0 bytes and the JSON result is gone forever — not because Claude was silent, but because the ear that was listening stopped existing.
+
+## What The Previous Plan Got Wrong
+
+It assumed the bug was Claude buffering output (`--output-format json`) and the parent waiting too patiently. That is *a* problem — the live log being empty in JSON mode is real — but it is not what killed this run. Even if we switch to `stream-json`, if the parent dies mid-await we lose everything the same way. The fix has to start with: **the parent's death must not destroy the run's output, and we must know why the parent died.**
+
+## Goals (Revised, In Priority Order)
+
+1. **Claude's output survives parent death.** Output streams to a file on disk, written by Claude's own stdout, not by a .NET stream reader.
+2. **Diagnose parent death.** Install handlers for every termination path .NET can observe and log to the file sink with `Flush()` before any of them return.
+3. **Recover on next startup.** Tasks left in `pending/` with a finalized transcript get classified and moved without re-invoking Claude.
+4. **Detect real hangs.** Idle-timeout based on transcript file growth, not on a pipe byte counter that's always zero.
+5. **Stop the parent from being responsible for the bytes.** The .NET process becomes a tailer of an on-disk file, not a pipe consumer. This removes whatever's currently killing it from the critical path.
+6. **Stream-json everywhere.** Required for goal 1 to be useful — JSON mode would only land a single blob at the very end, defeating the whole approach.
+
+## Architecture: Orchestrator + Detached Worker
 
 ```
-Still waiting on "claude" (PID=16540) — elapsed 00:04:00.0971582, stdoutBytes=0, stderrBytes=0, lastReadAgo=00:04:00.0984907
+┌──────────────────┐     spawns      ┌────────────────────┐
+│   CodeWorker     │ ─ ─ ─ ─ ─ ─ ─ ▶ │  PowerShell        │
+│  (.NET host)     │  detached       │  Run-ClaudeTask.ps1 │
+│                  │                 │     │              │
+│  tails           │                 │     ▼              │
+│  transcript.jsonl│ ◀── writes ──── │  claude … …jsonl   │
+│  + .done sentinel│                 │  + writes sentinel │
+└──────────────────┘                 └────────────────────┘
 ```
 
-The heartbeat already measures exactly the signal we need (`TimeSinceLastChunk`, `StdoutBytes`, `StderrBytes`) — it just does not act on it. Today the run can only be torn down by the 90-minute timeout, which chews hours of wall clock time on a stuck child.
+- The wrapper PowerShell script is responsible for invoking Claude with stdout redirected to `<task>.transcript.jsonl` and stderr to `<task>.stderr.log`. It is **detached from CodeWorker's process tree** (no inherited pipes).
+- On Claude's exit, the wrapper appends a single `{"type":"orchestrator-done","exitCode":N,"endedAt":"…"}` line to the transcript and writes a `.done` sentinel file next to it. These are CodeWorker's two unambiguous signals that the run is complete.
+- CodeWorker tails the transcript file (polling every ~250ms, position-tracked). It does **not** hold pipes to Claude. If CodeWorker dies, the wrapper and Claude keep going; the file accumulates regardless.
+- On startup, before discovering new tasks, CodeWorker scans `pending/` for any `<task>.transcript.jsonl`. If a `.done` sentinel exists, classify and move. If the transcript exists but no sentinel and no live wrapper, mark `Stalled` and route per repo settings. If the wrapper is still running, attach by tailing.
 
-This plan adds an explicit "no output for N minutes" kill-switch inside [CodeWorker/Process/RunProcess.cs](CodeWorker/Process/RunProcess.cs) so stuck runs die fast and the outer process moves on.
+## Concrete Changes
 
----
+### 1. New: `Run-ClaudeTask.ps1`
 
-## Objective
+Lives in `CodeWorker/Claude/Scripts/Run-ClaudeTask.ps1`, embedded as a resource and copied into `tasks/.codeworker/` on first run so it can be edited without rebuilding.
 
-When a child process has produced no stdout and no stderr for longer than a configured threshold, kill the process tree, flag the run as stalled, and return a `ProcessResult` distinct from a timeout so callers can classify it correctly.
+Parameters:
+- `-PromptFile <path>` (full prompt text)
+- `-TranscriptFile <path>` (NDJSON output)
+- `-StderrFile <path>`
+- `-DoneSentinel <path>`
+- `-ClaudeArgs <string[]>` (model, max-turns, system prompt, tools, etc.)
 
----
+Body (sketch — not final code, just shape):
 
-## Scope
+```powershell
+. $PROFILE
+$ErrorActionPreference = "Stop"
 
-- [CodeWorker/Process/ProcessSettings.cs](CodeWorker/Process/ProcessSettings.cs) — add `NoOutputKillMilliseconds`.
-- [CodeWorker/Process/ProcessResult.cs](CodeWorker/Process/ProcessResult.cs) — add `Stalled` flag. Do **not** reuse `TimedOut` — classification wants to tell the two apart.
-- [CodeWorker/Process/RunProcess.cs](CodeWorker/Process/RunProcess.cs) — detect stall in the existing heartbeat loop, kill tree, set `Stalled`, unblock `WaitForExit`.
-- [CodeWorker/Claude/ClaudeRunner.cs](CodeWorker/Claude/ClaudeRunner.cs) — populate `NoOutputKillMilliseconds` from a new `ClaudeSettings.NoOutputKillMinutes`.
-- [CodeWorker/Settings/ClaudeSettings.cs](CodeWorker/Settings/ClaudeSettings.cs) — add `NoOutputKillMinutes` + merge support.
-- [CodeWorker/appsettings.json](CodeWorker/appsettings.json) — default value (suggested: 10 minutes).
-- [CodeWorker/Commands/Run/ClassifyTaskResult.cs](CodeWorker/Commands/Run/ClassifyTaskResult.cs) — classify `Stalled` the same as `Failed` (it is a failure state — the child never produced work we can verify).
-- [CodeWorker/Commands/Run/WriteTaskLog.cs](CodeWorker/Commands/Run/WriteTaskLog.cs) / [LogTaskResult.cs](CodeWorker/Commands/Run/LogTaskResult.cs) — include `Stalled` in the per-task log body.
+# Stdout → transcript, stderr → stderr file
+& claude @ClaudeArgs --output-format stream-json --verbose --input-file $PromptFile `
+    1>> $TranscriptFile 2>> $StderrFile
 
-Tests:
-- [CodeWorker.Tests/Claude/ClaudeRunnerTests.cs](CodeWorker.Tests/Claude/ClaudeRunnerTests.cs) — `PassNoOutputKillFromClaudeSettings`, `NoOutputKillFlowsThroughProcessSettings`.
-- [CodeWorker.Tests/Commands/Run/ClassifyTaskResultTests.cs](CodeWorker.Tests/Commands/Run/ClassifyTaskResultTests.cs) — `ClassifyStalledAsFailed`.
-- Settings merge tests under `CodeWorker.Tests/Settings/` — `MergeRespectsNoOutputKillOverride`, `MergeFallsBackToBaseNoOutputKillWhenOverrideIsZero`.
+$exit = $LASTEXITCODE
+$done = @{ type = "orchestrator-done"; exitCode = $exit; endedAt = (Get-Date).ToString("o") } | ConvertTo-Json -Compress
+Add-Content -LiteralPath $TranscriptFile -Value $done
+Set-Content -LiteralPath $DoneSentinel -Value $exit
+```
 
-Untested (`[ExcludeFromCodeCoverage]` justified):
-- `RunProcess` — direct `System.Diagnostics.Process` wrapper.
+CodeWorker invokes the script via:
 
----
+```
+pwsh -NoProfile -NonInteractive -WindowStyle Hidden -File Run-ClaudeTask.ps1 …
+```
 
-## Design
+…using `Process.Start` with `UseShellExecute=true`, **no redirected pipes**, and `CreateNoWindow=true`. That is the configuration where the child is genuinely independent of the parent's std handles.
 
-### 1. New settings field — `ClaudeSettings.NoOutputKillMinutes`
+### 2. New: `IClaudeTranscriptTailer`
+
+- Polls the transcript file at a configurable interval (default 250ms).
+- Maintains a byte offset; reads only new bytes; splits on `\n`; parses each as a `ClaudeStreamEvent`.
+- Emits events to a `ClaudeProgressTracker` (counters + `lastEventAt`).
+- Returns when:
+  - a `result` event is seen, **or**
+  - an `orchestrator-done` sentinel line is seen, **or**
+  - the `.done` file appears, **or**
+  - idle timeout elapses with no new bytes (default 10 minutes), **or**
+  - wall-clock timeout elapses (existing 90-minute setting).
+
+### 3. New: `ClaudeStreamEvent` (NDJSON discriminated union)
+
+`system | assistant | user | tool_use | tool_result | result | orchestrator-done`. Matches the documented `stream-json --verbose` schema for everything except the orchestrator sentinel, which the wrapper script owns.
+
+### 4. New: `IRecoverPendingTasks`
+
+Runs at the top of `RunCommand.Execute`, before `processRepository.Process`. For each repo:
+
+- For each `*.transcript.jsonl` in `pending/`:
+  - If `<task>.done` exists → parse the transcript, classify, move task to `done/`/`failed/`/`blocked/` per outcome, move the transcript and stderr alongside it.
+  - Else, if a wrapper PID file exists and the PID is alive → attach the tailer and continue this run.
+  - Else → mark `Stalled`, route per `RepositorySettings.OnStalled` (new setting; default `blocked/`), preserve transcript for postmortem.
+
+### 5. Diagnostics For Why The Parent Died
+
+Add to `Program.Main`, before `application.DoWork`:
 
 ```csharp
-public int NoOutputKillMinutes { get; set; }
+AppDomain.CurrentDomain.UnhandledException += (_, e) => {
+    Log.Fatal(e.ExceptionObject as Exception, "UnhandledException IsTerminating={IsTerminating}", e.IsTerminating);
+    Log.CloseAndFlush();
+};
+TaskScheduler.UnobservedTaskException += (_, e) => {
+    Log.Error(e.Exception, "UnobservedTaskException Observed={Observed}", e.Observed);
+};
+AppDomain.CurrentDomain.ProcessExit += (_, _) => {
+    Log.Information("ProcessExit fired");
+    Log.CloseAndFlush();
+};
+Console.CancelKeyPress += (_, e) => {
+    Log.Warning("CancelKeyPress received SpecialKey={Key} Cancel={Cancel}", e.SpecialKey, e.Cancel);
+};
+PosixSignalRegistration.Create(PosixSignal.SIGTERM, ctx => Log.Warning("SIGTERM"));
+PosixSignalRegistration.Create(PosixSignal.SIGHUP,  ctx => Log.Warning("SIGHUP"));
+PosixSignalRegistration.Create(PosixSignal.SIGINT,  ctx => Log.Warning("SIGINT"));
 ```
 
-Merge rule: `overrides.NoOutputKillMinutes > 0 ? overrides.NoOutputKillMinutes : NoOutputKillMinutes`, matching the pattern already used by `TimeoutMinutes` in [ClaudeSettings.cs:31](CodeWorker/Settings/ClaudeSettings.cs#L31).
+If next run dies the same way, we'll see at least which path fired (or confirm none did, which narrows it to a native crash and points at AV/OS as the likely killer).
 
-Default in [appsettings.json](CodeWorker/appsettings.json): `10`. A ten-minute window is long enough that a slow Claude run (large tool-call batches, big file diffs) will not be killed by accident, and short enough that a stuck child does not burn the full 90-minute `TimeoutMinutes`. `0` disables the kill-switch.
+Also lower Serilog file sink `flushToDiskInterval` from `1s` to `250ms`, and call `Log.CloseAndFlush()` in a `Task.Delay`-based watchdog every 5s during long awaits — cheap insurance against losing the last second of logs to a hard kill.
 
-### 2. New `ProcessSettings` field — `NoOutputKillMilliseconds`
+### 6. Settings
 
-```csharp
-public int NoOutputKillMilliseconds { get; set; }
-```
-
-Wired in [ClaudeRunner.cs:41](CodeWorker/Claude/ClaudeRunner.cs#L41) parallel to `TimeoutMilliseconds`:
-
-```csharp
-NoOutputKillMilliseconds = claudeSettings.NoOutputKillMinutes > 0
-    ? claudeSettings.NoOutputKillMinutes * 60 * 1000
-    : 0,
-```
-
-`0` means "no stall detection" so other callers of `IRunProcess` are unaffected.
-
-### 3. New `ProcessResult` field — `Stalled`
-
-```csharp
-public bool Stalled { get; set; }
-```
-
-Separate from `TimedOut` because:
-- `TimedOut` means "overall budget exceeded — child may have been productive the whole time".
-- `Stalled` means "child went quiet — almost certainly waiting on a prompt or deadlocked".
-
-The two have different remediation paths (raise the timeout vs. fix auth / wrap the input differently), so merging them loses information.
-
-### 4. Detect the stall — [RunProcess.cs](CodeWorker/Process/RunProcess.cs)
-
-The existing `RunHeartbeat` loop already reads `streamState.StdoutBytes`, `streamState.StderrBytes`, and `streamState.TimeSinceLastChunk()`. Extend it with a kill branch:
-
-```csharp
-private async Task RunHeartbeat(
-    int processId,
-    string fileName,
-    StreamReadState streamState,
-    System.Diagnostics.Process process,
-    ProcessResult result,
-    int noOutputKillMilliseconds,
-    CancellationToken cancellationToken
-)
-{
-    var elapsed = Stopwatch.StartNew();
-
-    try
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            await Task.Delay(HeartbeatInterval, cancellationToken);
-
-            var sinceLastChunk = streamState.TimeSinceLastChunk();
-            var totalBytes = streamState.StdoutBytes + streamState.StderrBytes;
-
-            logger.Information(
-                "Still waiting on {FileName} (PID={ProcessId}) — elapsed {Elapsed}, stdoutBytes={StdoutBytes}, stderrBytes={StderrBytes}, lastReadAgo={LastReadAgo}",
-                fileName,
-                processId,
-                elapsed.Elapsed,
-                streamState.StdoutBytes,
-                streamState.StderrBytes,
-                sinceLastChunk
-            );
-
-            if (ShouldKillForStall(noOutputKillMilliseconds, totalBytes, sinceLastChunk))
-            {
-                logger.Error(
-                    "Process {FileName} (PID={ProcessId}) produced no output for {SinceLastChunk} — exceeded stall threshold {Threshold}, killing process tree",
-                    fileName,
-                    processId,
-                    sinceLastChunk,
-                    TimeSpan.FromMilliseconds(noOutputKillMilliseconds)
-                );
-
-                result.Stalled = true;
-                result.ExitCode = -1;
-                result.ErrorLines.Add(
-                    $"Process stalled — no output for {sinceLastChunk}. Killed after {noOutputKillMilliseconds / 60000} minute(s)."
-                );
-
-                process.Kill(entireProcessTree: true);
-
-                return;
-            }
-        }
-    }
-    catch (OperationCanceledException)
-    {
-        // ignored — heartbeat cancellation is expected when the process exits
-    }
-}
-
-private bool ShouldKillForStall(int noOutputKillMilliseconds, long totalBytes, TimeSpan sinceLastChunk)
-{
-    if (noOutputKillMilliseconds <= 0)
-    {
-        return false;
-    }
-
-    if (totalBytes > 0)
-    {
-        return false;
-    }
-
-    return sinceLastChunk.TotalMilliseconds >= noOutputKillMilliseconds;
+```jsonc
+"Claude": {
+  "Model": "claude-opus-4-6",
+  "MaxTurns": 100,
+  "SkipPermissions": true,
+  "OutputFormat": "stream-json",       // was "json"
+  "TimeoutMinutes": 90,
+  "IdleTimeoutMinutes": 10,            // new
+  "TranscriptPollMilliseconds": 250    // new
 }
 ```
 
-Key rules:
-- Only triggers when `totalBytes == 0`. A process that emitted something and then went quiet is a different failure mode (hung mid-run) and should be handled by `TimeoutMilliseconds`, not by the stall kill-switch. We can extend later if needed, but a conservative first cut prevents false kills.
-- Fires `process.Kill(entireProcessTree: true)`, which unblocks the awaiting `WaitForExitAsync`.
-- Sets `result.Stalled` **before** killing so there is no race with the main thread reading `ExitCode`.
-- `ExitCode = -1` matches the `TimedOut` convention already in the file.
+`OutputFormat` is no longer user-tunable in practice — anything other than `stream-json` breaks the tailer — but kept in settings for diagnostics.
 
-After the kill, `Run` naturally falls through: `WaitForExit` returns, `stdoutReader` / `stderrReader` drain, the final `"Process exited."` line logs. The only adjustment in `Run` itself is to leave `result.ExitCode` alone when `result.Stalled` is set, paralleling the existing `if (!result.TimedOut)` guard:
+### 7. Files Touched / Added
 
-```csharp
-if (!result.TimedOut && !result.Stalled)
-{
-    result.ExitCode = process.ExitCode;
-}
-```
+| File | Change |
+|------|--------|
+| `Claude/Scripts/Run-ClaudeTask.ps1` | **new** — embedded resource, copied to `tasks/.codeworker/` |
+| `Claude/ClaudeRunner.cs` | rewritten: writes prompt + args to disk, launches detached pwsh wrapper, hands off to tailer |
+| `Claude/ClaudeStreamEvent.cs` | **new** |
+| `Claude/ClaudeTranscriptTailer.cs` | **new** |
+| `Claude/ClaudeProgressTracker.cs` | **new** |
+| `Claude/RecoverPendingTasks.cs` | **new** |
+| `Settings/ClaudeSettings.cs` | add `IdleTimeoutMinutes`, `TranscriptPollMilliseconds`; default `OutputFormat = "stream-json"` |
+| `Commands/Run/ClassifyTaskResult.cs` | consume the `result` event first; text heuristics fall back only when no `result` event exists |
+| `Commands/Run/RunCommand.cs` | call `IRecoverPendingTasks` before processing new tasks |
+| `Program.cs` | install diagnostic handlers from §5 |
+| `Process/RunProcess.cs` | unchanged (still used for `claude --version`, git) |
 
-### 5. Classify `Stalled` as `Failed` — [ClassifyTaskResult.cs](CodeWorker/Commands/Run/ClassifyTaskResult.cs)
+### 8. TDD
 
-A stalled run did not produce verifiable work. Route it to `tasks/failed/` via the existing `Failed` outcome rather than inventing a new `TaskOutcome`:
+- `ClaudeTranscriptTailerTests`: feeds a fake filesystem with NDJSON appended over time. Asserts events are surfaced in order, `result` event ends the wait, idle timeout triggers, partial trailing line is buffered until newline.
+- `RunClaudeTaskScriptTests` (PowerShell-free unit): verifies the C# code that **assembles** the pwsh command line — argument escaping, paths quoted, no inherited pipes flag set. The script itself is small enough that it doesn't need its own test (per `powershell.md`).
+- `RecoverPendingTasksTests`: pending task with `.done` + success transcript → moved to `done/`. With `error_max_turns` → `blocked/`. No sentinel + no live wrapper → `Stalled` → routed per setting.
+- `ClassifyTaskResultTests` extended for `result`-event-driven classification with text-heuristic fallback.
+- `ClaudeRunnerTests`: launches via wrapper script path, never sets `StandardInput`, never reads pipes, returns immediately after handing off to the tailer.
+- `ProgramDiagnosticsTests`: smoke test that the handlers from §5 are wired (resolved via a small `ITerminationDiagnostics` registrar so it's testable).
 
-```csharp
-if (result.Stalled)
-{
-    return TaskOutcome.Failed;
-}
-```
+### 9. Migration Notes
 
-Place above the existing `TimedOut` branch so both are handled before the exit-code check. Rationale: reusing `Failed` avoids touching `TaskFolders`, `ITaskOutcomeHandlerFactory`, and the folder layout.
+- First run after upgrade: `tasks/.codeworker/` directory is created, `Run-ClaudeTask.ps1` written there, `appsettings.json` schema upgraded in-place (preserving user values, adding new keys with defaults).
+- Existing `pending/<task>.live.log` files from the old format are renamed to `<task>.legacy.live.log` and ignored by the recovery scan.
 
-### 6. Surface `Stalled` in the per-task log
+## Why This Survives The Failure We Just Saw
 
-Add the flag to the log body in [WriteTaskLog.cs](CodeWorker/Commands/Run/WriteTaskLog.cs) alongside `TimedOut`:
+Today's run: parent dies → child orphaned → child's stdout pipe goes nowhere → output lost → task left in `pending/` with a 0-byte log → next run can't tell what happened.
 
-```
-Stalled:        true
-```
+After this plan: parent dies → wrapper + Claude keep running → transcript file grows → `.done` sentinel written → next CodeWorker startup sees the sentinel, classifies, moves the task. The recovery path is the *primary* path for any run where the parent doesn't make it to the end, not a special case.
 
-The per-task log is the first place an operator looks, so the flag needs to be visible without running the binary.
+## Open Questions Worth Confirming Before Coding
 
----
+1. Does `pwsh -WindowStyle Hidden -File … &` (started via `Process.Start` with `UseShellExecute=true`) actually survive the .NET parent's death on Windows in practice? I believe yes, but worth a 5-minute manual verification before committing to the design.
+2. The "what killed the parent" diagnostic in §5 may turn up evidence (e.g. a SIGINT-like console signal from the IDE, or an unhandled exception we're currently swallowing) that lets us also fix the root cause. Worth landing §5 first as a small standalone PR.
+3. `claude` may not support `--input-file`. If the only non-interactive input path is stdin, the wrapper script must pipe the prompt file in via PowerShell `Get-Content $PromptFile | claude …`. Verify with `claude -h` before finalizing.
 
-## TDD Plan
+## Out Of Scope
 
-### `ClaudeRunnerTests`
-
-1. `PassNoOutputKillMillisecondsFromClaudeSettings` — `ClaudeSettings.NoOutputKillMinutes = 5` → `ProcessSettings.NoOutputKillMilliseconds = 300_000`.
-2. `SetNoOutputKillMillisecondsToZeroWhenNoOutputKillMinutesIsZero` — disables stall detection.
-3. `SetNoOutputKillMillisecondsToZeroWhenNoOutputKillMinutesIsNegative` — defensive; treat negative as disabled.
-
-### `ClaudeSettingsTests`
-
-4. `MergeRespectsNoOutputKillOverride`.
-5. `MergeFallsBackToBaseNoOutputKillWhenOverrideIsZero`.
-
-### `ClassifyTaskResultTests`
-
-6. `ClassifyStalledResultAsFailed` — `new ProcessResult { Stalled = true }` → `TaskOutcome.Failed`.
-7. `StalledBeatsExitCodeZero` — `Stalled = true, ExitCode = 0` still maps to `Failed`. Guards against the ordering bug where a stall sneaks past because the exit code was never updated.
-
-### `WriteTaskLogTests`
-
-8. `IncludeStalledFlagInTheLogBody` — body contains `Stalled:` with the bool.
-
-### Untested
-
-- `RunProcess` stall detection — `[ExcludeFromCodeCoverage]`. The logic in `ShouldKillForStall` is deliberately extracted as a pure private method so future us can lift it into its own `[ExcludeFromCodeCoverage]`-free class if we ever want direct unit tests. Not in this phase.
-
----
-
-## Implementation Order
-
-**Phase 1 — Settings plumbing**
-
-1. Write `ClaudeSettingsTests` 4-5. Fail.
-2. Add `NoOutputKillMinutes` to `ClaudeSettings` + `MergeWith`. Green.
-3. Write `ClaudeRunnerTests` 1-3. Fail.
-4. Add `NoOutputKillMilliseconds` to `ProcessSettings`. Wire it in `ClaudeRunner`. Green.
-
-**Phase 2 — Result shape**
-
-5. Add `Stalled` to `ProcessResult` (no tests — POCO).
-6. Write `ClassifyTaskResultTests` 6-7. Fail.
-7. Add the `Stalled` branch to `ClassifyTaskResult`. Green.
-
-**Phase 3 — Log surfacing**
-
-8. Write `WriteTaskLogTests` 8. Fail.
-9. Add the `Stalled:` line to the body composer. Green.
-
-**Phase 4 — Kill path**
-
-10. Extend `RunProcess.RunHeartbeat` to detect the stall and call `Kill(entireProcessTree: true)` per the design above.
-11. Guard `ExitCode` assignment in `Run` with `!result.Stalled`.
-12. Manual smoke test: run against a task that reliably hangs (or a fake child that reads stdin and sleeps forever), confirm the process is killed at the configured threshold, the live log captures the `Process stalled — no output for ...` error line, and the task file moves to `tasks/failed/`.
-
-**Phase 5 — Finish**
-
-13. Set `NoOutputKillMinutes: 10` in [appsettings.json](CodeWorker/appsettings.json).
-14. `dotnet format` → `dotnet build` (triggers CSharpier) → `dotnet test`.
-
----
-
-## Constraints
-
-- Do not reuse `TimedOut` for stall — the two failure modes need to be distinguishable in logs and history.
-- Do not change the `ITaskOutcomeHandlerFactory` surface — `Stalled` classifies to the existing `Failed` handler.
-- Do not change `IRunProcess`. The new field lives on `ProcessSettings`, so existing callers that omit it keep the previous behavior.
-- Follow every rule in `.claude/rules/csharp/` — primary constructors, block-body methods, `switch` expressions with discard arms, interfaces describe capabilities.
-- No `async void`. Heartbeat and readers continue to return `Task`.
-- No `ConfigureAwait(false)`.
-- No `DevLog` in permanent code.
-
----
-
-## Acceptance Criteria
-
-- A child process that writes no bytes to stdout or stderr for `NoOutputKillMinutes` minutes is killed (entire process tree) before `TimeoutMinutes` elapses.
-- After the kill, `ProcessResult.Stalled == true`, `ProcessResult.ExitCode == -1`, and `ErrorLines` contains the stall-kill message.
-- `ClassifyTaskResult` maps a `Stalled` result to `TaskOutcome.Failed`.
-- The task file moves to `tasks/failed/` and a per-task log appears in the same folder.
-- The per-task log body contains a `Stalled: true` line for a stalled run and `Stalled: false` for every other outcome.
-- `NoOutputKillMinutes = 0` disables the kill-switch — no false positives on slow-but-progressing runs.
-- A run that emits even a single byte and then goes quiet is **not** killed by the stall switch; it remains governed by `TimeoutMinutes`.
-- A run that completes normally produces no "stalled" log line and `Stalled == false`.
-- `dotnet build`, `dotnet test`, `dotnet format` all clean.
-
----
-
-## Verification
-
-- [ ] Tests written before implementation (TDD) for items 1-8.
-- [ ] `RunProcess` change exercised manually against a deliberately hung child; log output captured and attached to the task log.
-- [ ] No compiler warnings introduced.
-- [ ] Namespaces match folder paths exactly.
-- [ ] Must follow all rules `.claude\rules\csharp` — no exceptions.
-- [ ] No banned patterns used (see `.claude/rules/csharp/not-allowed.md`).
-- [ ] All tests pass (`dotnet test`).
-- [ ] `dotnet format` run on all modified files.
-- [ ] `dotnet build` to apply CSharpier changes.
-- [ ] Report results before finishing.
+- Parallel task execution.
+- Changing the markdown task format.
+- Anything in the git workflow.
