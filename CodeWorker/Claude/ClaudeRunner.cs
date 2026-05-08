@@ -49,10 +49,15 @@ public class ClaudeRunner(
 				StderrFile = paths.StderrFile,
 				DoneSentinel = paths.DoneSentinel,
 				PidFile = paths.PidFile,
+				WrapperStartedFile = paths.WrapperStartedFile,
+				WrapperLogFile = paths.WrapperLogFile,
+				ClaudeArgsFile = paths.ClaudeArgsFile,
 				ClaudeArgs = claudeArgs,
 				WorkingDirectory = Path.GetDirectoryName(markdownFilePath),
 			}
 		);
+
+		await VerifyWrapperStarted(paths);
 
 		var tailResult = await tailer.Tail(BuildTailRequest(claudeSettings, paths, processId), new ClaudeProgressTracker());
 
@@ -75,6 +80,35 @@ public class ClaudeRunner(
 		fileSystemTools.DeleteFile(paths.DoneSentinel);
 		fileSystemTools.DeleteFile(paths.PidFile);
 		fileSystemTools.DeleteFile(paths.LiveLogFile);
+		fileSystemTools.DeleteFile(paths.WrapperStartedFile);
+		fileSystemTools.DeleteFile(paths.WrapperLogFile);
+		fileSystemTools.DeleteFile(paths.ClaudeArgsFile);
+	}
+
+	private async Task VerifyWrapperStarted(TranscriptPaths paths)
+	{
+		const int maxWaitMilliseconds = 5000;
+		const int pollMilliseconds = 100;
+
+		var elapsed = 0;
+
+		while (elapsed < maxWaitMilliseconds)
+		{
+			if (fileSystemTools.FileExists(paths.WrapperStartedFile))
+			{
+				logger.Information("Wrapper started sentinel observed at {Path}", paths.WrapperStartedFile);
+				return;
+			}
+
+			await Task.Delay(pollMilliseconds);
+			elapsed += pollMilliseconds;
+		}
+
+		logger.Warning(
+			"Wrapper did not write started sentinel within {WaitMs}ms — pwsh likely failed to launch. Check {WrapperLogFile}",
+			maxWaitMilliseconds,
+			paths.WrapperLogFile
+		);
 	}
 
 	private List<string> BuildClaudeArgs(ClaudeSettings claudeSettings, List<ReferenceFile> referenceFiles)
@@ -196,7 +230,7 @@ public class ClaudeRunner(
 		}
 		catch (Exception exception)
 		{
-			logger.Warning(exception, "Failed to copy transcript to live log");
+			logger.Warning("Failed to copy transcript to live log: {Message}", exception.Message);
 		}
 	}
 

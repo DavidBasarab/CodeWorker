@@ -19,6 +19,12 @@ public class WrapperLaunchSettings
 
 	public string PidFile { get; set; }
 
+	public string WrapperStartedFile { get; set; }
+
+	public string WrapperLogFile { get; set; }
+
+	public string ClaudeArgsFile { get; set; }
+
 	public List<string> ClaudeArgs { get; set; } = [];
 
 	public string WorkingDirectory { get; set; }

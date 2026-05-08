@@ -10,25 +10,27 @@ public class LaunchWrapper(ILogger logger) : ILaunchWrapper
 {
 	public int Launch(WrapperLaunchSettings settings)
 	{
+		WriteClaudeArgsFile(settings);
+
 		var arguments = BuildArguments(settings);
 
 		logger.Information(
-			"Launching detached pwsh wrapper Script={ScriptPath} Transcript={TranscriptFile}",
+			"Launching pwsh wrapper Script={ScriptPath} Transcript={TranscriptFile} WrapperLog={WrapperLogFile}",
 			settings.ScriptPath,
-			settings.TranscriptFile
+			settings.TranscriptFile,
+			settings.WrapperLogFile
 		);
 
 		var startInfo = new System.Diagnostics.ProcessStartInfo
 		{
 			FileName = "pwsh",
 			Arguments = arguments,
-			UseShellExecute = true,
+			UseShellExecute = false,
 			CreateNoWindow = true,
-			WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
 			WorkingDirectory = settings.WorkingDirectory ?? string.Empty,
 		};
 
-		using var process = System.Diagnostics.Process.Start(startInfo);
+		var process = System.Diagnostics.Process.Start(startInfo);
 
 		if (process == null)
 		{
@@ -37,7 +39,7 @@ public class LaunchWrapper(ILogger logger) : ILaunchWrapper
 
 		var processId = process.Id;
 
-		logger.Information("Detached wrapper started PID={ProcessId}", processId);
+		logger.Information("Wrapper started PID={ProcessId}", processId);
 
 		return processId;
 	}
@@ -64,26 +66,39 @@ public class LaunchWrapper(ILogger logger) : ILaunchWrapper
 			Quote(settings.DoneSentinel),
 			"-PidFile",
 			Quote(settings.PidFile),
+			"-WrapperStartedFile",
+			Quote(settings.WrapperStartedFile),
+			"-WrapperLogFile",
+			Quote(settings.WrapperLogFile),
 		};
 
-		if (settings.ClaudeArgs is { Count: > 0 })
-		{
-			parts.Add("-ClaudeArgs");
-			parts.Add(string.Join(",", settings.ClaudeArgs.Select(Quote)));
-		}
+		parts.Add("-ClaudeArgsFile");
+		parts.Add(Quote(settings.ClaudeArgsFile));
 
 		return string.Join(" ", parts);
+	}
+
+	private static void WriteClaudeArgsFile(WrapperLaunchSettings settings)
+	{
+		if (string.IsNullOrEmpty(settings.ClaudeArgsFile))
+		{
+			return;
+		}
+
+		var lines = settings.ClaudeArgs ?? [];
+
+		File.WriteAllLines(settings.ClaudeArgsFile, lines, System.Text.Encoding.UTF8);
 	}
 
 	private static string Quote(string value)
 	{
 		if (string.IsNullOrEmpty(value))
 		{
-			return "''";
+			return "\"\"";
 		}
 
-		var escaped = value.Replace("'", "''");
+		var escaped = value.Replace("\"", "\\\"");
 
-		return $"'{escaped}'";
+		return $"\"{escaped}\"";
 	}
 }

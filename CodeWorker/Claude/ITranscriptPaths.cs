@@ -19,5 +19,11 @@ public class TranscriptPaths
 
 	public string LiveLogFile { get; set; }
 
+	public string WrapperStartedFile { get; set; }
+
+	public string WrapperLogFile { get; set; }
+
+	public string ClaudeArgsFile { get; set; }
+
 	public string TaskName { get; set; }
 }

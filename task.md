@@ -1,4 +1,8 @@
-I tried to run a new task and again it timed out.  I did not kill it I let the application run.  Come up with a plan that will kick off a powershell script and have the claude output write to a log file and then monitor the log file.
+Running a task with the claude headless is is not working correctly.  We are going to focus on just running the claude tasks only.  Create a sample task ro tasks in this folder C:\Code\CodeWorker\CodeWorker.Tests\Tasks
+
+And a way to the application to pass a task file and have the application run it with what would be a good output to guess what it should be like.  
+
+Then start several iterations up to 6 and make it work as expect.  If you cannot get it working after 6 then let me know and we will think about another path.
 
   C:\Code\CodeWorker   FirstTask ≡  ?1  ﮫ⠀4.381s
  dotnet run --project .\CodeWorker\CodeWorker.csproj -- track

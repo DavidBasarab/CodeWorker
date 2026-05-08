@@ -17,6 +17,9 @@ public class BuildTranscriptPaths : ITranscriptPaths
 			DoneSentinel = Path.Combine(directory, $"{withoutExtension}.done"),
 			PidFile = Path.Combine(directory, $"{withoutExtension}.wrapper.pid"),
 			LiveLogFile = Path.Combine(directory, $"{withoutExtension}.live.log"),
+			WrapperStartedFile = Path.Combine(directory, $"{withoutExtension}.wrapper.started"),
+			WrapperLogFile = Path.Combine(directory, $"{withoutExtension}.wrapper.log"),
+			ClaudeArgsFile = Path.Combine(directory, $"{withoutExtension}.claude-args.txt"),
 		};
 	}
 }
