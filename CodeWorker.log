@@ -107,3 +107,24 @@ Output: {"type":"system","subtype":"init","cwd":"C:\\Code\\CodeWorker\\tasks\\pe
 {"type":"result","subtype":"success","is_error":false,"api_error_status":null,"duration_ms":374910,"duration_api_ms":140858,"num_turns":23,"result":"Clean. The intended changes only:\n\n- `CodeWorker.csproj` — added `SampleTaskTemplate.md` embedded resource entry\n- `SetupRepository.cs` — added one `WriteAllText` call for the sample template\n- `TasksReadme.md` — rewritten with planning rationale, all seven folders, naming convention, sample-template pointer\n- `SampleTaskTemplate.md` — new embedded resource\n- `SetupRepositoryTests.cs` — three new tests + fake `Returns` setup\n\nAll 474 tests pass in Release config. (Debug build was blocked because the running CodeWorker process holds a lock on its own DLL/EXE — Release build sidesteps that since it writes to a different output folder.)","stop_reason":"end_turn","session_id":"fe3c78a2-d91d-42a3-896e-2abad72e4c3f","total_cost_usd":1.7696302499999998,"usage":{"input_tokens":27,"cache_creation_input_tokens":99863,"cache_read_input_tokens":1880745,"output_tokens":8026,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":99863,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[{"input_tokens":1,"output_tokens":249,"cache_read_input_tokens":99216,"cache_creation_input_tokens":647,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":647},"type":"message"}],"speed":"standard"},"modelUsage":{"claude-haiku-4-5-20251001":{"inputTokens":4244,"outputTokens":17,"cacheReadInputTokens":0,"cacheCreationInputTokens":0,"webSearchRequests":0,"costUSD":0.004329,"contextWindow":200000,"maxOutputTokens":32000},"claude-opus-4-7":{"inputTokens":27,"outputTokens":8026,"cacheReadInputTokens":1880745,"cacheCreationInputTokens":99863,"webSearchRequests":0,"costUSD":1.7653012499999998,"contextWindow":1000000,"maxOutputTokens":64000}},"permission_denials":[],"terminal_reason":"completed","fast_mode_state":"off","uuid":"30f6373e-7411-45e5-b916-c586a71e5fe8"}
 Errors: 
 ---
+[2026-05-07 21:52:01] Task: 09-task-template-readme.md | Exit Code: 0
+Reference Files: .gitkeep
+Output: [FirstTask b6265c0] 🤖 09-task-template-readme
+ 15 files changed, 493 insertions(+), 6 deletions(-)
+ create mode 100644 CodeWorker/Commands/Setup/SampleTaskTemplate.md
+ rename tasks/{todo => done}/09-task-template-readme.md (100%)
+ create mode 100644 tasks/pending/09-task-template-readme.claude-args.txt
+ create mode 100644 tasks/pending/09-task-template-readme.prompt.txt
+ create mode 100644 tasks/pending/09-task-template-readme.stderr.log
+ create mode 100644 tasks/pending/09-task-template-readme.transcript.jsonl
+ create mode 100644 tasks/pending/09-task-template-readme.wrapper.log
+ create mode 100644 tasks/pending/09-task-template-readme.wrapper.pid
+ create mode 100644 tasks/pending/09-task-template-readme.wrapper.started
+Errors: 
+---
+[2026-05-07 21:52:02] Task: 09-task-template-readme.md | Exit Code: 0
+Reference Files: .gitkeep
+Output: 
+Errors: To https://github.com/DavidBasarab/CodeWorker.git
+   e15f4d1..b6265c0  FirstTask -> FirstTask
+---
