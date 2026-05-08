@@ -24,6 +24,8 @@ public class SetupRepositoryTests
 		A.CallTo(() => readEmbeddedResource.Read("TasksReadme.md")).Returns("# Tasks\n\n01-example");
 		A.CallTo(() => readEmbeddedResource.Read("defaultSettings.json"))
 			.Returns("{\"Enabled\": true, \"Claude\": {}, \"Tasks\": {}, \"Notifications\": {}}");
+		A.CallTo(() => readEmbeddedResource.Read("SampleTaskTemplate.md"))
+			.Returns("# Sample Task Template\n\nplanning matters");
 
 		setupRepository = new SetupRepository(fileSystemTools, readEmbeddedResource, trackRepository, logger);
 	}
@@ -170,6 +172,37 @@ public class SetupRepositoryTests
 		await setupRepository.Setup(repositoryPath);
 
 		A.CallTo(() => readEmbeddedResource.Read("defaultSettings.json")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteSampleTemplateToTasksDirectory()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => fileSystemTools.WriteAllText(@"C:\Projects\my-api\tasks\sample-task-template.md", A<string>._))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task ReadSampleTemplateFromEmbeddedResource()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() => readEmbeddedResource.Read("SampleTaskTemplate.md")).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task WriteSampleTemplateContentFromEmbeddedResource()
+	{
+		await setupRepository.Setup(repositoryPath);
+
+		A.CallTo(() =>
+				fileSystemTools.WriteAllText(
+					@"C:\Projects\my-api\tasks\sample-task-template.md",
+					A<string>.That.Contains("# Sample Task Template")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
