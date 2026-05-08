@@ -20,7 +20,9 @@ public class ProcessTaskTests
 	private readonly IRecordRepositoryRunHistory recordRepositoryRunHistory;
 	private readonly ITaskOutcomeHandlerFactory outcomeHandlerFactory;
 	private readonly ITaskOutcomeHandler outcomeHandler;
+	private readonly IRunGitWorkflow runGitWorkflow;
 	private readonly ILogger logger;
+	private TaskProcessingDecision gitDecision;
 	private readonly ProcessTask processTask;
 	private readonly TaskExecutionContext context;
 	private readonly string taskFile;
@@ -40,7 +42,10 @@ public class ProcessTaskTests
 		recordRepositoryRunHistory = A.Fake<IRecordRepositoryRunHistory>();
 		outcomeHandlerFactory = A.Fake<ITaskOutcomeHandlerFactory>();
 		outcomeHandler = A.Fake<ITaskOutcomeHandler>();
+		runGitWorkflow = A.Fake<IRunGitWorkflow>();
 		logger = A.Fake<ILogger>();
+
+		gitDecision = TaskProcessingDecision.Continue;
 
 		taskFile = @"C:\Projects\my-api\tasks\todo\01_MyTask.md";
 
@@ -79,6 +84,8 @@ public class ProcessTaskTests
 		A.CallTo(() => outcomeHandlerFactory.For(A<TaskOutcome>._)).Returns(outcomeHandler);
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 			.ReturnsLazily(() => Task.FromResult(outcomeDecision));
+		A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._))
+			.ReturnsLazily(() => Task.FromResult(gitDecision));
 
 		processTask = new ProcessTask(
 			moveTask,
@@ -90,6 +97,7 @@ public class ProcessTaskTests
 			recordRunHistory,
 			recordRepositoryRunHistory,
 			outcomeHandlerFactory,
+			runGitWorkflow,
 			logger
 		);
 	}
@@ -473,5 +481,66 @@ public class ProcessTaskTests
 
 		A.CallTo(() => moveLiveLog.Move(context, A<TaskExecution>.That.Matches(t => t.TaskName == "01_MyTask.md")))
 			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task RunGitWorkflowAfterMoveLiveLogForDoneTasks()
+	{
+		currentOutcome = TaskOutcome.Done;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly())
+			.Then(
+				A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+			);
+	}
+
+	[Fact]
+	public async Task DoNotRunGitWorkflowForBlockedTasks()
+	{
+		currentOutcome = TaskOutcome.Blocked;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task DoNotRunGitWorkflowForFailedTasks()
+	{
+		currentOutcome = TaskOutcome.Failed;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task ReturnStopWhenGitWorkflowReturnsStop()
+	{
+		currentOutcome = TaskOutcome.Done;
+		gitDecision = TaskProcessingDecision.Stop;
+
+		var decision = await processTask.Run(context, taskFile);
+
+		decision.Should().Be(TaskProcessingDecision.Stop);
+	}
+
+	[Fact]
+	public async Task MoveLiveLogStillRunsBeforeGitWorkflowEvenWhenGitWorkflowFails()
+	{
+		currentOutcome = TaskOutcome.Done;
+		gitDecision = TaskProcessingDecision.Stop;
+
+		await processTask.Run(context, taskFile);
+
+		A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._))
+			.MustHaveHappenedOnceExactly()
+			.Then(
+				A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+			);
 	}
 }

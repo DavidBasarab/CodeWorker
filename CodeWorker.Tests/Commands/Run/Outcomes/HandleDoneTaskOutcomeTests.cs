@@ -8,17 +8,14 @@ namespace Testing.FatCat.CodeWorker.Commands.Run.Outcomes;
 public class HandleDoneTaskOutcomeTests
 {
 	private readonly IMoveTask moveTask;
-	private readonly IRunGitWorkflow runGitWorkflow;
 	private readonly ILogger logger;
 	private readonly HandleDoneTaskOutcome handler;
 	private readonly TaskExecutionContext context;
 	private readonly TaskExecution task;
-	private TaskProcessingDecision gitDecision;
 
 	public HandleDoneTaskOutcomeTests()
 	{
 		moveTask = A.Fake<IMoveTask>();
-		runGitWorkflow = A.Fake<IRunGitWorkflow>();
 		logger = A.Fake<ILogger>();
 
 		context = new TaskExecutionContext
@@ -34,12 +31,7 @@ public class HandleDoneTaskOutcomeTests
 			PendingFilePath = @"C:\Projects\my-api\tasks\pending\01_MyTask.md",
 		};
 
-		gitDecision = TaskProcessingDecision.Continue;
-
-		A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._))
-			.ReturnsLazily(() => Task.FromResult(gitDecision));
-
-		handler = new HandleDoneTaskOutcome(moveTask, runGitWorkflow, logger);
+		handler = new HandleDoneTaskOutcome(moveTask, logger);
 	}
 
 	[Fact]
@@ -51,21 +43,11 @@ public class HandleDoneTaskOutcomeTests
 	}
 
 	[Fact]
-	public async Task RunGitWorkflow()
+	public async Task ReturnContinueDecision()
 	{
-		await handler.Handle(context, task);
-
-		A.CallTo(() => runGitWorkflow.Run(context, task)).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task ReturnGitWorkflowDecision()
-	{
-		gitDecision = TaskProcessingDecision.Stop;
-
 		var decision = await handler.Handle(context, task);
 
-		decision.Should().Be(TaskProcessingDecision.Stop);
+		decision.Should().Be(TaskProcessingDecision.Continue);
 	}
 
 	[Fact]

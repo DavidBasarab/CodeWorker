@@ -11,9 +11,16 @@ public interface IMoveLiveLog
 
 public class MoveLiveLog(IMoveFile moveFile, IFileSystemTools fileSystemTools, ILogger logger) : IMoveLiveLog
 {
-	private static readonly string[] Suffixes = [".live.log", ".transcript.jsonl", ".stderr.log"];
+	private static readonly string[] Suffixes = [".live.log", ".transcript.jsonl", ".stderr.log", ".wrapper.log"];
 
-	private static readonly string[] CleanupSuffixes = [".prompt.txt", ".done", ".wrapper.pid"];
+	private static readonly string[] CleanupSuffixes =
+	[
+		".prompt.txt",
+		".done",
+		".wrapper.pid",
+		".wrapper.started",
+		".claude-args.txt",
+	];
 
 	public void Move(TaskExecutionContext context, TaskExecution task)
 	{

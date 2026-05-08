@@ -12,7 +12,7 @@ public class TaskOutcomeHandlerFactoryTests
 
 	public TaskOutcomeHandlerFactoryTests()
 	{
-		doneHandler = new HandleDoneTaskOutcome(A.Fake<IMoveTask>(), A.Fake<IRunGitWorkflow>(), A.Fake<Serilog.ILogger>());
+		doneHandler = new HandleDoneTaskOutcome(A.Fake<IMoveTask>(), A.Fake<Serilog.ILogger>());
 		blockedHandler = new HandleBlockedTaskOutcome(
 			A.Fake<IMoveTask>(),
 			A.Fake<IGenerateBlockedExplanation>(),

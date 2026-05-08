@@ -21,6 +21,7 @@ public class ProcessTask(
 	IRecordRunHistory recordRunHistory,
 	IRecordRepositoryRunHistory recordRepositoryRunHistory,
 	ITaskOutcomeHandlerFactory outcomeHandlerFactory,
+	IRunGitWorkflow runGitWorkflow,
 	ILogger logger
 ) : IProcessTask
 {
@@ -77,6 +78,16 @@ public class ProcessTask(
 			logger.Information("Outcome handler complete for {TaskName}", task.TaskName);
 
 			moveLiveLog.Move(context, task);
+
+			if (outcome == TaskOutcome.Done)
+			{
+				var gitDecision = await runGitWorkflow.Run(context, task);
+
+				if (gitDecision == TaskProcessingDecision.Stop)
+				{
+					return TaskProcessingDecision.Stop;
+				}
+			}
 
 			return decision;
 		}

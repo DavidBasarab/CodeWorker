@@ -152,6 +152,38 @@ public class MoveLiveLogTests
 	}
 
 	[Fact]
+	public void MoveTheWrapperLogToTheLogsFolder()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() =>
+				moveFile.Move(
+					@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.wrapper.log",
+					@"C:\Projects\my-api\tasks\logs\05-refactor-run-process.wrapper.log"
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void DeleteTheWrapperStartedSentinel()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.wrapper.started"))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public void DeleteTheClaudeArgsFile()
+	{
+		moveLiveLog.Move(context, task);
+
+		A.CallTo(() => fileSystemTools.DeleteFile(@"C:\Projects\my-api\tasks\pending\05-refactor-run-process.claude-args.txt"))
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
 	public void DeriveTheBaseFileNameFromTheTaskName()
 	{
 		task.TaskName = "08-relocate-task-logs.md";
