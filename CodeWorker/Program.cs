@@ -1,7 +1,9 @@
 using System.Reflection;
 using Autofac;
+using FatCat.CodeWorker.Logging;
 using FatCat.Toolkit.Console;
 using FatCat.Toolkit.Injection;
+using Serilog;
 
 namespace FatCat.CodeWorker;
 
@@ -9,15 +11,15 @@ public static class Program
 {
 	public static async Task Main(params string[] args)
 	{
-		await Task.CompletedTask;
-
 		ConsoleLog.LogCallerInformation = true;
+
+		TerminationDiagnostics.Install();
 
 		try
 		{
 			SystemScope.Initialize(
 				new ContainerBuilder(),
-				new List<Assembly> { typeof(Program).Assembly, typeof(ConsoleLog).Assembly },
+				[typeof(Program).Assembly, typeof(ConsoleLog).Assembly],
 				ScopeOptions.SetLifetimeScope
 			);
 
@@ -28,6 +30,11 @@ public static class Program
 		catch (Exception ex)
 		{
 			ConsoleLog.WriteException(ex);
+		}
+		finally
+		{
+			Log.CloseAndFlush();
+			Console.Out.Flush();
 		}
 	}
 }

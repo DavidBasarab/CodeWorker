@@ -13,4 +13,6 @@ public class TaskFolders
 	public string Failed { get; set; }
 
 	public string Reference { get; set; }
+
+	public string Logs { get; set; }
 }

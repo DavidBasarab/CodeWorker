@@ -33,6 +33,11 @@ public class SetupRepository(
 		await fileSystemTools.WriteAllText(Path.Combine(tasksPath, "README.md"), readEmbeddedResource.Read("TasksReadme.md"));
 
 		await fileSystemTools.WriteAllText(
+			Path.Combine(tasksPath, "sample-task-template.md"),
+			readEmbeddedResource.Read("SampleTaskTemplate.md")
+		);
+
+		await fileSystemTools.WriteAllText(
 			Path.Combine(tasksPath, "settings.json"),
 			readEmbeddedResource.Read("defaultSettings.json")
 		);

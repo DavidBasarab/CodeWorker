@@ -1,0 +1,5 @@
+﻿--model
+claude-opus-4-7
+--max-turns
+20
+--dangerously-skip-permissions

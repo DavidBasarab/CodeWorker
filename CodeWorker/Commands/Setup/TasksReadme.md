@@ -2,17 +2,27 @@
 
 This folder is managed by [CodeWorker](https://github.com/DavidBasarab/CodeWorker) — an overnight task runner for Claude Code.
 
+## Why Planning Matters
+
+CodeWorker executes tasks **unattended overnight**. There is no human in the loop between "task lands in `todo/`" and "commit lands in git the next morning." That makes the task file itself the entire contract with an AI that has no memory of prior tasks and cannot ask clarifying questions.
+
+A precise, well-bounded task that took 20 minutes to plan produces a clean reviewable commit. A vague task written in 30 seconds produces noise that takes longer to triage in the morning than it would have taken to plan correctly. **Planning is the work, not overhead.**
+
 ## Folder Structure
 
 | Folder | Purpose |
 |--------|---------|
-| `todo/` | Place task files here. They are executed in filename order. |
-| `done/` | Completed tasks are moved here automatically. |
-| `blocked/` | Tasks that could not be completed are moved here with an explanation. |
+| `todo/` | Queue of task files waiting to run. Executed in filename order. |
+| `pending/` | Task currently being processed by the runner. |
+| `done/` | Completed tasks. |
+| `blocked/` | Tasks the runner could not safely complete. Each has a sibling explanation file. |
+| `failed/` | Tasks that errored out during execution. |
+| `reference/` | Supporting context the runner can read while executing tasks. |
+| `logs/` | Per-task log output (`<task>.log` and `<task>.live.log`). |
 
-## Task File Format
+## Naming Convention
 
-Task files are plain Markdown. The filename prefix controls execution order:
+Task files use a zero-padded numeric prefix that is **one higher than the highest number currently in `tasks/done/`** (and any other queued task in `tasks/todo/`). Filename order is execution order:
 
 ```
 01-refactor-auth-service.md
@@ -20,4 +30,10 @@ Task files are plain Markdown. The filename prefix controls execution order:
 03-update-api-docs.md
 ```
 
-Each file contains a self-contained prompt describing exactly what Claude should do.
+## Sample Template
+
+A starter template lives next to this file at [`sample-task-template.md`](sample-task-template.md). Copy it into `tasks/todo/`, rename it with the next number, and fill it in.
+
+## Where to Learn More
+
+See the **Task File Requirements** section of the [CodeWorker README](https://github.com/DavidBasarab/CodeWorker#task-file-requirements) for the full contract.

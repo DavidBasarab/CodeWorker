@@ -15,7 +15,9 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Commands\Setup\TasksReadme.md" />
+		<EmbeddedResource Include="Commands\Setup\SampleTaskTemplate.md" />
 		<EmbeddedResource Include="Commands\Setup\defaultSettings.json" />
+		<EmbeddedResource Include="Claude\Scripts\Run-ClaudeTask.ps1" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="appsettings.json">
@@ -28,6 +30,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="FatCat.Toolkit" Version="*" />
+		<PackageReference Include="Microsoft.Win32.SystemEvents" Version="*" />
 		<PackageReference Include="Serilog" Version="*" />
 		<PackageReference Include="Serilog.Exceptions" Version="*" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="*" />

@@ -37,6 +37,7 @@ public class LoadRepoSettingsTests
 		    "ReferenceFolder": "tasks/reference",
 		    "PendingFolder": "tasks/pending",
 		    "BlockedFolder": "tasks/blocked",
+		    "LogsFolder": "tasks/logs",
 		    "StopOnBlocked": true,
 		    "RunPlanningPhase": false
 		  }
@@ -131,5 +132,13 @@ public class LoadRepoSettingsTests
 		var result = await loadRepoSettings.Load(@"C:\Projects\my-api");
 
 		result.Claude.Model.Should().Be("claude-sonnet-4-6");
+	}
+
+	[Fact]
+	public async Task DeserializeTasksLogsFolder()
+	{
+		var result = await loadRepoSettings.Load(@"C:\Projects\my-api");
+
+		result.Tasks.LogsFolder.Should().Be("tasks/logs");
 	}
 }

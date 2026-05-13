@@ -15,6 +15,7 @@ public interface IResolveCommand
 public class CommandResolver(
 	IRunSetupCommand setupCommand,
 	IRunTaskCommand runTaskCommand,
+	IRunSingleTaskCommand runSingleTaskCommand,
 	IRunTrackCommand trackCommand,
 	IRunUntrackCommand untrackCommand,
 	IRunListCommand listCommand,
@@ -35,6 +36,7 @@ public class CommandResolver(
 			"untrack" => untrackCommand,
 			"list" => listCommand,
 			"info" => infoCommand,
+			"run-task" => runSingleTaskCommand,
 			_ => runTaskCommand,
 		};
 	}

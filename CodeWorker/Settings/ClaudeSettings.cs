@@ -16,6 +16,10 @@ public class ClaudeSettings
 
 	public int TimeoutMinutes { get; set; }
 
+	public int IdleTimeoutMinutes { get; set; }
+
+	public int TranscriptPollMilliseconds { get; set; }
+
 	public ClaudeSettings MergeWith(ClaudeSettings overrides)
 	{
 		return new ClaudeSettings
@@ -29,6 +33,9 @@ public class ClaudeSettings
 				: overrides.SystemPromptFile,
 			AllowedTools = overrides?.AllowedTools is { Count: > 0 } ? overrides.AllowedTools : AllowedTools,
 			TimeoutMinutes = overrides?.TimeoutMinutes > 0 ? overrides.TimeoutMinutes : TimeoutMinutes,
+			IdleTimeoutMinutes = overrides?.IdleTimeoutMinutes > 0 ? overrides.IdleTimeoutMinutes : IdleTimeoutMinutes,
+			TranscriptPollMilliseconds =
+				overrides?.TranscriptPollMilliseconds > 0 ? overrides.TranscriptPollMilliseconds : TranscriptPollMilliseconds,
 		};
 	}
 }

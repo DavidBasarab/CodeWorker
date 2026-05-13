@@ -1,3 +1,4 @@
+using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Process;
 
@@ -137,5 +138,117 @@ public class ClassifyTaskResultTests
 		};
 
 		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Done);
+	}
+
+	[Fact]
+	public void ReturnDoneWhenResultEventIsSuccess()
+	{
+		var result = new ProcessResult
+		{
+			ExitCode = 0,
+			ResultEvent = new ClaudeStreamEvent
+			{
+				Kind = ClaudeEventKind.Result,
+				Subtype = "success",
+				IsError = false,
+			},
+		};
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Done);
+	}
+
+	[Fact]
+	public void ReturnBlockedWhenResultEventSubtypeIsErrorMaxTurns()
+	{
+		var result = new ProcessResult
+		{
+			ExitCode = 1,
+			ResultEvent = new ClaudeStreamEvent
+			{
+				Kind = ClaudeEventKind.Result,
+				Subtype = "error_max_turns",
+				IsError = true,
+			},
+		};
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Blocked);
+	}
+
+	[Fact]
+	public void ReturnBlockedWhenResultEventResultTextStartsWithBlockedMarker()
+	{
+		var result = new ProcessResult
+		{
+			ExitCode = 0,
+			ResultEvent = new ClaudeStreamEvent
+			{
+				Kind = ClaudeEventKind.Result,
+				Subtype = "success",
+				IsError = false,
+				ResultText = "BLOCKED: missing requirement",
+			},
+		};
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Blocked);
+	}
+
+	[Fact]
+	public void ReturnFailedWhenResultEventIsError()
+	{
+		var result = new ProcessResult
+		{
+			ExitCode = 1,
+			ResultEvent = new ClaudeStreamEvent
+			{
+				Kind = ClaudeEventKind.Result,
+				Subtype = "error_during_execution",
+				IsError = true,
+			},
+		};
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Failed);
+	}
+
+	[Fact]
+	public void PreferResultEventOverExitCodeWhenBothPresent()
+	{
+		var result = new ProcessResult
+		{
+			ExitCode = 0,
+			ResultEvent = new ClaudeStreamEvent
+			{
+				Kind = ClaudeEventKind.Result,
+				Subtype = "error_max_turns",
+				IsError = true,
+			},
+		};
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Blocked);
+	}
+
+	[Fact]
+	public void FallBackToExitCodeWhenNoResultEvent()
+	{
+		var result = new ProcessResult { ExitCode = 0, ResultEvent = null };
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Done);
+	}
+
+	[Fact]
+	public void ReturnFailedWhenTimedOutEvenWithSuccessResultEvent()
+	{
+		var result = new ProcessResult
+		{
+			ExitCode = -1,
+			TimedOut = true,
+			ResultEvent = new ClaudeStreamEvent
+			{
+				Kind = ClaudeEventKind.Result,
+				Subtype = "success",
+				IsError = false,
+			},
+		};
+
+		classifyTaskResult.Classify(result).Should().Be(TaskOutcome.Failed);
 	}
 }

@@ -1,3 +1,4 @@
+using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Settings;
 using Serilog;
 
@@ -15,6 +16,7 @@ public class ProcessRepository(
 	ICollectReferenceFiles collectReferenceFiles,
 	IDiscoverTasks discoverTasks,
 	IProcessTask processTask,
+	IRecoverPendingTasks recoverPendingTasks,
 	ILogger logger
 ) : IProcessRepository
 {
@@ -33,6 +35,8 @@ public class ProcessRepository(
 		}
 
 		var context = await BuildContext(repository, globalClaudeSettings, repoSettings);
+
+		await recoverPendingTasks.Recover(repository, repoSettings, context.Folders);
 
 		foreach (var taskFile in discoverTasks.Discover(context.Folders.Todo))
 		{

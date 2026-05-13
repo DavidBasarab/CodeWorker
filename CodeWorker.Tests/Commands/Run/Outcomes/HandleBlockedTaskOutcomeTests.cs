@@ -87,4 +87,34 @@ public class HandleBlockedTaskOutcomeTests
 		A.CallTo(() => generateBlockedExplanation.Generate(A<string>._, A<string>._, A<ProcessResult>._))
 			.MustHaveHappenedOnceExactly();
 	}
+
+	[Fact]
+	public async Task LogBeforeMove()
+	{
+		await handler.Handle(context, task);
+
+		A.CallTo(() =>
+				logger.Information(
+					A<string>.That.Contains("Handling Blocked outcome"),
+					A<string>.That.Contains("01_MyTask.md"),
+					A<string>.That.Contains("blocked")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task LogAfterMove()
+	{
+		await handler.Handle(context, task);
+
+		A.CallTo(() =>
+				logger.Information(
+					A<string>.That.Contains("Moved"),
+					A<string>.That.Contains("01_MyTask.md"),
+					A<string>.That.Contains("blocked")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
 }

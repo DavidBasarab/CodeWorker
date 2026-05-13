@@ -1,22 +1,22 @@
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Commands.Run.Outcomes;
 using FatCat.CodeWorker.Settings;
+using Serilog;
 
 namespace Testing.FatCat.CodeWorker.Commands.Run.Outcomes;
 
 public class HandleDoneTaskOutcomeTests
 {
 	private readonly IMoveTask moveTask;
-	private readonly IRunGitWorkflow runGitWorkflow;
+	private readonly ILogger logger;
 	private readonly HandleDoneTaskOutcome handler;
 	private readonly TaskExecutionContext context;
 	private readonly TaskExecution task;
-	private TaskProcessingDecision gitDecision;
 
 	public HandleDoneTaskOutcomeTests()
 	{
 		moveTask = A.Fake<IMoveTask>();
-		runGitWorkflow = A.Fake<IRunGitWorkflow>();
+		logger = A.Fake<ILogger>();
 
 		context = new TaskExecutionContext
 		{
@@ -31,12 +31,7 @@ public class HandleDoneTaskOutcomeTests
 			PendingFilePath = @"C:\Projects\my-api\tasks\pending\01_MyTask.md",
 		};
 
-		gitDecision = TaskProcessingDecision.Continue;
-
-		A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._))
-			.ReturnsLazily(() => Task.FromResult(gitDecision));
-
-		handler = new HandleDoneTaskOutcome(moveTask, runGitWorkflow);
+		handler = new HandleDoneTaskOutcome(moveTask, logger);
 	}
 
 	[Fact]
@@ -48,20 +43,40 @@ public class HandleDoneTaskOutcomeTests
 	}
 
 	[Fact]
-	public async Task RunGitWorkflow()
+	public async Task ReturnContinueDecision()
 	{
-		await handler.Handle(context, task);
+		var decision = await handler.Handle(context, task);
 
-		A.CallTo(() => runGitWorkflow.Run(context, task)).MustHaveHappenedOnceExactly();
+		decision.Should().Be(TaskProcessingDecision.Continue);
 	}
 
 	[Fact]
-	public async Task ReturnGitWorkflowDecision()
+	public async Task LogBeforeMove()
 	{
-		gitDecision = TaskProcessingDecision.Stop;
+		await handler.Handle(context, task);
 
-		var decision = await handler.Handle(context, task);
+		A.CallTo(() =>
+				logger.Information(
+					A<string>.That.Contains("Handling Done outcome"),
+					A<string>.That.Contains("01_MyTask.md"),
+					A<string>.That.Contains("done")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
+	}
 
-		decision.Should().Be(TaskProcessingDecision.Stop);
+	[Fact]
+	public async Task LogAfterMove()
+	{
+		await handler.Handle(context, task);
+
+		A.CallTo(() =>
+				logger.Information(
+					A<string>.That.Contains("Moved"),
+					A<string>.That.Contains("01_MyTask.md"),
+					A<string>.That.Contains("done")
+				)
+			)
+			.MustHaveHappenedOnceExactly();
 	}
 }

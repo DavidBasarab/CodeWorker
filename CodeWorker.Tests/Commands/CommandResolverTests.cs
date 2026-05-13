@@ -12,6 +12,7 @@ public class CommandResolverTests
 {
 	private readonly IRunSetupCommand setupCommand;
 	private readonly IRunTaskCommand runTaskCommand;
+	private readonly IRunSingleTaskCommand runSingleTaskCommand;
 	private readonly IRunTrackCommand trackCommand;
 	private readonly IRunUntrackCommand untrackCommand;
 	private readonly IRunListCommand listCommand;
@@ -22,12 +23,21 @@ public class CommandResolverTests
 	{
 		setupCommand = A.Fake<IRunSetupCommand>();
 		runTaskCommand = A.Fake<IRunTaskCommand>();
+		runSingleTaskCommand = A.Fake<IRunSingleTaskCommand>();
 		trackCommand = A.Fake<IRunTrackCommand>();
 		untrackCommand = A.Fake<IRunUntrackCommand>();
 		listCommand = A.Fake<IRunListCommand>();
 		infoCommand = A.Fake<IRunInfoCommand>();
 
-		resolver = new CommandResolver(setupCommand, runTaskCommand, trackCommand, untrackCommand, listCommand, infoCommand);
+		resolver = new CommandResolver(
+			setupCommand,
+			runTaskCommand,
+			runSingleTaskCommand,
+			trackCommand,
+			untrackCommand,
+			listCommand,
+			infoCommand
+		);
 	}
 
 	[Fact]
@@ -132,5 +142,21 @@ public class CommandResolverTests
 		var result = resolver.Resolve(new[] { "INFO" });
 
 		result.Should().BeSameAs(infoCommand);
+	}
+
+	[Fact]
+	public void ReturnRunSingleTaskCommandWhenArgsContainRunTask()
+	{
+		var result = resolver.Resolve(new[] { "run-task", "some-file.md" });
+
+		result.Should().BeSameAs(runSingleTaskCommand);
+	}
+
+	[Fact]
+	public void ReturnRunSingleTaskCommandCaseInsensitive()
+	{
+		var result = resolver.Resolve(new[] { "RUN-TASK", "some-file.md" });
+
+		result.Should().BeSameAs(runSingleTaskCommand);
 	}
 }

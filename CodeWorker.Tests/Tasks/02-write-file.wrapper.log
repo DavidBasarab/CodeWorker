@@ -1,0 +1,16 @@
+﻿[2026-05-07T21:39:20.6891493-04:00] wrapper started PID=33960
+[2026-05-07T21:39:20.6912633-04:00] PromptFile=C:\Code\CodeWorker\CodeWorker.Tests\Tasks\02-write-file.prompt.txt
+[2026-05-07T21:39:20.6917183-04:00] TranscriptFile=C:\Code\CodeWorker\CodeWorker.Tests\Tasks\02-write-file.transcript.jsonl
+[2026-05-07T21:39:20.6920297-04:00] StderrFile=C:\Code\CodeWorker\CodeWorker.Tests\Tasks\02-write-file.stderr.log
+[2026-05-07T21:39:20.6923366-04:00] DoneSentinel=C:\Code\CodeWorker\CodeWorker.Tests\Tasks\02-write-file.done
+[2026-05-07T21:39:20.6927238-04:00] PidFile=C:\Code\CodeWorker\CodeWorker.Tests\Tasks\02-write-file.wrapper.pid
+[2026-05-07T21:39:20.6943020-04:00] ClaudeArgs.Count=5
+[2026-05-07T21:39:20.6958053-04:00] ClaudeArgs[0]=--model
+[2026-05-07T21:39:20.6964878-04:00] ClaudeArgs[1]=claude-opus-4-7
+[2026-05-07T21:39:20.6968519-04:00] ClaudeArgs[2]=--max-turns
+[2026-05-07T21:39:20.6972032-04:00] ClaudeArgs[3]=20
+[2026-05-07T21:39:20.6975331-04:00] ClaudeArgs[4]=--dangerously-skip-permissions
+[2026-05-07T21:39:20.7120057-04:00] claude resolved to: C:\Users\dbasa\AppData\Local\Microsoft\WinGet\Links\claude.exe
+[2026-05-07T21:39:20.7136186-04:00] invoking claude with 9 args, stdin redirected from PromptFile
+[2026-05-07T21:39:29.8508735-04:00] claude exited ExitCode=0
+[2026-05-07T21:39:29.8533427-04:00] wrapper done ExitCode=0

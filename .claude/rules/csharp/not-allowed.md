@@ -18,6 +18,7 @@ These are hard stops. Do not do any of the following under any circumstances.
 - Do NOT use string concatenation with `+` — use string interpolation
 - Do NOT abbreviate names — write them out fully
 - Do NOT write comments explaining what code does — rename until obvious
+- Do NOT use `new List<T>()`, `new T[0]`, or `new Dictionary<K, V>()` for empty or inline-populated collections — use collection expressions (`[]`)
 
 ## Architecture
 - Do NOT use property injection or setter injection — constructor only

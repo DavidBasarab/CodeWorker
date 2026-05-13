@@ -1,3 +1,4 @@
+using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Settings;
 using Serilog;
@@ -12,6 +13,7 @@ public class ProcessRepositoryTests
 	private readonly ICollectReferenceFiles collectReferenceFiles;
 	private readonly IDiscoverTasks discoverTasks;
 	private readonly IProcessTask processTask;
+	private readonly IRecoverPendingTasks recoverPendingTasks;
 	private readonly ILogger logger;
 	private readonly ProcessRepository processRepository;
 	private readonly RepositorySettings repositorySettings;
@@ -30,6 +32,7 @@ public class ProcessRepositoryTests
 		collectReferenceFiles = A.Fake<ICollectReferenceFiles>();
 		discoverTasks = A.Fake<IDiscoverTasks>();
 		processTask = A.Fake<IProcessTask>();
+		recoverPendingTasks = A.Fake<IRecoverPendingTasks>();
 		logger = A.Fake<ILogger>();
 
 		repositorySettings = new RepositorySettings { Path = @"C:\Projects\my-api", Enabled = true };
@@ -89,6 +92,7 @@ public class ProcessRepositoryTests
 			collectReferenceFiles,
 			discoverTasks,
 			processTask,
+			recoverPendingTasks,
 			logger
 		);
 	}

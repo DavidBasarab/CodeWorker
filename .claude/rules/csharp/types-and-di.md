@@ -10,6 +10,24 @@
 - Do not annotate defensively. If a value cannot be null in normal usage, do not mark it nullable.
 - Do not write `string?`, `ILogger?`, or other nullable annotations on injected dependencies or values that are always populated.
 
+## Collection Initialization
+- Use collection expressions (`[]`) to initialize collections. Do not use `new List<T>()`, `new T[0]`, or `new Dictionary<K, V>()` when an empty or inline-populated collection is needed.
+- The target type drives the actual collection — `List<ReferenceFile> ReferenceFiles { get; set; } = [];` produces an empty list, just like `new List<ReferenceFile>()`, but is shorter and consistent.
+
+```csharp
+// Correct — collection expressions
+public List<ReferenceFile> ReferenceFiles { get; set; } = [];
+public string[] Names { get; set; } = [];
+var pending = [task1, task2, task3];
+
+// Wrong — explicit constructor calls
+public List<ReferenceFile> ReferenceFiles { get; set; } = new List<ReferenceFile>();
+public string[] Names { get; set; } = new string[0];
+var pending = new List<Task> { task1, task2, task3 };
+```
+
+This applies to property initializers, field initializers, local variables, and method arguments. The exception is when you need a specific concrete type that the target cannot infer (e.g. assigning to `IEnumerable<T>` and needing a `HashSet<T>` specifically) — in that case, name the type explicitly.
+
 ## Thread-Safe Collections
 - Use `ConcurrentDictionary<TKey, TValue>` for shared mutable state that is accessed across threads.
 - Never use a plain `Dictionary` with manual locking for this purpose.

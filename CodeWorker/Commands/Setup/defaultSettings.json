@@ -27,6 +27,7 @@
     "PendingFolder": "tasks/pending",
     "BlockedFolder": "tasks/blocked",
     "FailedFolder": "tasks/failed",
+    "LogsFolder": "tasks/logs",
     "StopOnBlocked": true,
     "StopOnFailed": true,
     "RunPlanningPhase": false

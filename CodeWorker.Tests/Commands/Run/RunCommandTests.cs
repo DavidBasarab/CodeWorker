@@ -1,3 +1,4 @@
+using FatCat.CodeWorker.Claude;
 using FatCat.CodeWorker.Commands.Run;
 using FatCat.CodeWorker.Settings;
 using Serilog;
@@ -8,6 +9,7 @@ public class RunCommandTests
 {
 	private readonly ILoadAppSettings loadAppSettings;
 	private readonly IProcessRepository processRepository;
+	private readonly ILogClaudeEnvironment logClaudeEnvironment;
 	private readonly ILogger logger;
 	private readonly RunCommand command;
 	private CodeWorkerSettings appSettings;
@@ -16,6 +18,7 @@ public class RunCommandTests
 	{
 		loadAppSettings = A.Fake<ILoadAppSettings>();
 		processRepository = A.Fake<IProcessRepository>();
+		logClaudeEnvironment = A.Fake<ILogClaudeEnvironment>();
 		logger = A.Fake<ILogger>();
 
 		appSettings = new CodeWorkerSettings
@@ -37,8 +40,19 @@ public class RunCommandTests
 
 		A.CallTo(() => loadAppSettings.Load()).Returns(Task.FromResult(appSettings));
 		A.CallTo(() => processRepository.Process(A<RepositorySettings>._, A<ClaudeSettings>._)).Returns(Task.CompletedTask);
+		A.CallTo(() => logClaudeEnvironment.Log()).Returns(Task.CompletedTask);
 
-		command = new RunCommand(loadAppSettings, processRepository, logger);
+		command = new RunCommand(loadAppSettings, processRepository, logClaudeEnvironment, logger);
+	}
+
+	[Fact]
+	public async Task LogClaudeEnvironmentBeforeProcessingRepositories()
+	{
+		await command.Execute(Array.Empty<string>());
+
+		A.CallTo(() => logClaudeEnvironment.Log())
+			.MustHaveHappenedOnceExactly()
+			.Then(A.CallTo(() => processRepository.Process(A<RepositorySettings>._, A<ClaudeSettings>._)).MustHaveHappened());
 	}
 
 	[Fact]
@@ -99,7 +113,8 @@ public class RunCommandTests
 	{
 		await command.Execute(Array.Empty<string>());
 
-		A.CallTo(() => logger.Information("Task runner complete")).MustHaveHappenedOnceExactly();
+		A.CallTo(() => logger.Information(A<string>.That.Contains("Task runner complete"), 2, A<double>._))
+			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
