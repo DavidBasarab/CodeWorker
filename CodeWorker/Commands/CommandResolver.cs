@@ -1,3 +1,4 @@
+using FatCat.CodeWorker.Commands.Help;
 using FatCat.CodeWorker.Commands.Info;
 using FatCat.CodeWorker.Commands.List;
 using FatCat.CodeWorker.Commands.Run;
@@ -19,7 +20,8 @@ public class CommandResolver(
 	IRunTrackCommand trackCommand,
 	IRunUntrackCommand untrackCommand,
 	IRunListCommand listCommand,
-	IRunInfoCommand infoCommand
+	IRunInfoCommand infoCommand,
+	IRunHelpCommand helpCommand
 ) : IResolveCommand
 {
 	public ICommand Resolve(string[] args)
@@ -37,6 +39,10 @@ public class CommandResolver(
 			"list" => listCommand,
 			"info" => infoCommand,
 			"run-task" => runSingleTaskCommand,
+			"help" => helpCommand,
+			"--help" => helpCommand,
+			"-h" => helpCommand,
+			"/?" => helpCommand,
 			_ => runTaskCommand,
 		};
 	}

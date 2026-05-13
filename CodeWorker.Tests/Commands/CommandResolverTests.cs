@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Commands;
+using FatCat.CodeWorker.Commands.Help;
 using FatCat.CodeWorker.Commands.Info;
 using FatCat.CodeWorker.Commands.List;
 using FatCat.CodeWorker.Commands.Run;
@@ -17,6 +18,7 @@ public class CommandResolverTests
 	private readonly IRunUntrackCommand untrackCommand;
 	private readonly IRunListCommand listCommand;
 	private readonly IRunInfoCommand infoCommand;
+	private readonly IRunHelpCommand helpCommand;
 	private readonly CommandResolver resolver;
 
 	public CommandResolverTests()
@@ -28,6 +30,7 @@ public class CommandResolverTests
 		untrackCommand = A.Fake<IRunUntrackCommand>();
 		listCommand = A.Fake<IRunListCommand>();
 		infoCommand = A.Fake<IRunInfoCommand>();
+		helpCommand = A.Fake<IRunHelpCommand>();
 
 		resolver = new CommandResolver(
 			setupCommand,
@@ -36,7 +39,8 @@ public class CommandResolverTests
 			trackCommand,
 			untrackCommand,
 			listCommand,
-			infoCommand
+			infoCommand,
+			helpCommand
 		);
 	}
 
@@ -158,5 +162,45 @@ public class CommandResolverTests
 		var result = resolver.Resolve(new[] { "RUN-TASK", "some-file.md" });
 
 		result.Should().BeSameAs(runSingleTaskCommand);
+	}
+
+	[Fact]
+	public void ReturnHelpCommandWhenArgsContainHelp()
+	{
+		var result = resolver.Resolve(new[] { "help" });
+
+		result.Should().BeSameAs(helpCommand);
+	}
+
+	[Fact]
+	public void ReturnHelpCommandCaseInsensitive()
+	{
+		var result = resolver.Resolve(new[] { "HELP" });
+
+		result.Should().BeSameAs(helpCommand);
+	}
+
+	[Fact]
+	public void ReturnHelpCommandForDoubleDashHelp()
+	{
+		var result = resolver.Resolve(new[] { "--help" });
+
+		result.Should().BeSameAs(helpCommand);
+	}
+
+	[Fact]
+	public void ReturnHelpCommandForDashH()
+	{
+		var result = resolver.Resolve(new[] { "-h" });
+
+		result.Should().BeSameAs(helpCommand);
+	}
+
+	[Fact]
+	public void ReturnHelpCommandForSlashQuestionMark()
+	{
+		var result = resolver.Resolve(new[] { "/?" });
+
+		result.Should().BeSameAs(helpCommand);
 	}
 }
