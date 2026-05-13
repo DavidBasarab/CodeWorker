@@ -241,12 +241,35 @@ else
 	Write-Step "Publishing to $InstallPath"
 }
 
+# Preserve user's appsettings.json across updates — it holds the tracked Repositories list.
+# `dotnet publish` will overwrite it with the source copy from the freshly cloned repo.
+$existingAppSettings = Join-Path $InstallPath "appsettings.json"
+$appSettingsBackup = $null
+
+if ($isUpdate -and (Test-Path $existingAppSettings))
+{
+	$appSettingsBackup = Join-Path $env:TEMP "CodeWorker-appsettings.backup.json"
+
+	Copy-Item -Path $existingAppSettings -Destination $appSettingsBackup -Force
+
+	Write-Host "Backed up existing appsettings.json" -ForegroundColor Cyan
+}
+
 dotnet publish "$tempRepo\CodeWorker\CodeWorker.csproj" -c Release -o $InstallPath
 
 if ($LASTEXITCODE -ne 0)
 {
 	Write-Host "Build failed." -ForegroundColor Red
 	exit 1
+}
+
+if ($appSettingsBackup -and (Test-Path $appSettingsBackup))
+{
+	Copy-Item -Path $appSettingsBackup -Destination $existingAppSettings -Force
+
+	Remove-Item -Path $appSettingsBackup -Force
+
+	Write-Host "Restored existing appsettings.json (tracked repositories preserved)" -ForegroundColor Green
 }
 
 if ($isUpdate)
@@ -315,4 +338,5 @@ else
 	Write-Host "Installation complete." -ForegroundColor Green
 }
 
-Write-Host "Run: FatCatCodeWorker --help" -ForegroundColor Cyan
+Write-Host "Available commands: setup, track, untrack, list, info, run-task" -ForegroundColor Cyan
+Write-Host "Example: FatCatCodeWorker setup <repository-path>" -ForegroundColor Cyan
