@@ -1,4 +1,4 @@
-Why did this fail?  I did not kill the tool it just stopp but did some work.
+Why did this fail?  I did not kill the tool it just stop but did some work.
 
 
  dotnet run --project .\CodeWorker\CodeWorker.csproj
