@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Microsoft.Win32;
 using Serilog;
 
 namespace FatCat.CodeWorker.Logging;
@@ -16,6 +18,8 @@ public static class TerminationDiagnostics
 		RegisterPosixSignal(PosixSignal.SIGINT);
 		RegisterPosixSignal(PosixSignal.SIGHUP);
 		RegisterPosixSignal(PosixSignal.SIGQUIT);
+
+		RegisterPowerEvents();
 	}
 
 	private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs args)
@@ -67,5 +71,41 @@ public static class TerminationDiagnostics
 		{
 			// ignored — not all signals are supported on every platform
 		}
+	}
+
+	private static void RegisterPowerEvents()
+	{
+		if (!OperatingSystem.IsWindows())
+		{
+			return;
+		}
+
+		SubscribeToPowerModeChanged();
+	}
+
+	[SupportedOSPlatform("windows")]
+	private static void SubscribeToPowerModeChanged()
+	{
+		SystemEvents.PowerModeChanged += OnPowerModeChanged;
+	}
+
+	[SupportedOSPlatform("windows")]
+	private static void OnPowerModeChanged(object sender, PowerModeChangedEventArgs args)
+	{
+		var powerEventLogger = new PowerEventLogger(Log.Logger, new SerilogFlusher());
+
+		powerEventLogger.Log(MapPowerMode(args.Mode));
+	}
+
+	[SupportedOSPlatform("windows")]
+	private static PowerEventMode MapPowerMode(PowerModes mode)
+	{
+		return mode switch
+		{
+			PowerModes.Suspend => PowerEventMode.Suspend,
+			PowerModes.Resume => PowerEventMode.Resume,
+			PowerModes.StatusChange => PowerEventMode.StatusChange,
+			_ => throw new ArgumentOutOfRangeException(nameof(mode)),
+		};
 	}
 }

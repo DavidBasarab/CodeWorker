@@ -30,6 +30,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="FatCat.Toolkit" Version="*" />
+		<PackageReference Include="Microsoft.Win32.SystemEvents" Version="*" />
 		<PackageReference Include="Serilog" Version="*" />
 		<PackageReference Include="Serilog.Exceptions" Version="*" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="*" />
