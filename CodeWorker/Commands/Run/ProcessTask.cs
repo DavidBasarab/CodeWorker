@@ -16,7 +16,7 @@ public class ProcessTask(
 	IRunClaude runClaude,
 	ILogTaskResult logTaskResult,
 	IWriteTaskLog writeTaskLog,
-	IMoveLiveLog moveLiveLog,
+	ICleanPendingArtifacts cleanPendingArtifacts,
 	IClassifyTaskResult classifyTaskResult,
 	IRecordRunHistory recordRunHistory,
 	IRecordRepositoryRunHistory recordRepositoryRunHistory,
@@ -77,7 +77,7 @@ public class ProcessTask(
 			var decision = await outcomeHandlerFactory.For(outcome).Handle(context, task);
 			logger.Information("Outcome handler complete for {TaskName}", task.TaskName);
 
-			moveLiveLog.Move(context, task);
+			cleanPendingArtifacts.Clean(context, task, outcome);
 
 			if (outcome == TaskOutcome.Done)
 			{

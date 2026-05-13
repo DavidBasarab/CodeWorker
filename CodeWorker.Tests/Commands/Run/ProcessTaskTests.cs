@@ -14,7 +14,7 @@ public class ProcessTaskTests
 	private readonly IRunClaude runClaude;
 	private readonly ILogTaskResult logTaskResult;
 	private readonly IWriteTaskLog writeTaskLog;
-	private readonly IMoveLiveLog moveLiveLog;
+	private readonly ICleanPendingArtifacts cleanPendingArtifacts;
 	private readonly IClassifyTaskResult classifyTaskResult;
 	private readonly IRecordRunHistory recordRunHistory;
 	private readonly IRecordRepositoryRunHistory recordRepositoryRunHistory;
@@ -36,7 +36,7 @@ public class ProcessTaskTests
 		runClaude = A.Fake<IRunClaude>();
 		logTaskResult = A.Fake<ILogTaskResult>();
 		writeTaskLog = A.Fake<IWriteTaskLog>();
-		moveLiveLog = A.Fake<IMoveLiveLog>();
+		cleanPendingArtifacts = A.Fake<ICleanPendingArtifacts>();
 		classifyTaskResult = A.Fake<IClassifyTaskResult>();
 		recordRunHistory = A.Fake<IRecordRunHistory>();
 		recordRepositoryRunHistory = A.Fake<IRecordRepositoryRunHistory>();
@@ -92,7 +92,7 @@ public class ProcessTaskTests
 			runClaude,
 			logTaskResult,
 			writeTaskLog,
-			moveLiveLog,
+			cleanPendingArtifacts,
 			classifyTaskResult,
 			recordRunHistory,
 			recordRepositoryRunHistory,
@@ -433,7 +433,7 @@ public class ProcessTaskTests
 	}
 
 	[Fact]
-	public async Task CallMoveLiveLogAfterTheOutcomeHandlerForDoneTasks()
+	public async Task CleanPendingArtifactsAfterTheOutcomeHandlerForDoneTasks()
 	{
 		currentOutcome = TaskOutcome.Done;
 
@@ -442,12 +442,13 @@ public class ProcessTaskTests
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 			.MustHaveHappenedOnceExactly()
 			.Then(
-				A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+				A.CallTo(() => cleanPendingArtifacts.Clean(A<TaskExecutionContext>._, A<TaskExecution>._, TaskOutcome.Done))
+					.MustHaveHappenedOnceExactly()
 			);
 	}
 
 	[Fact]
-	public async Task CallMoveLiveLogAfterTheOutcomeHandlerForBlockedTasks()
+	public async Task CleanPendingArtifactsAfterTheOutcomeHandlerForBlockedTasks()
 	{
 		currentOutcome = TaskOutcome.Blocked;
 
@@ -456,12 +457,13 @@ public class ProcessTaskTests
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 			.MustHaveHappenedOnceExactly()
 			.Then(
-				A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+				A.CallTo(() => cleanPendingArtifacts.Clean(A<TaskExecutionContext>._, A<TaskExecution>._, TaskOutcome.Blocked))
+					.MustHaveHappenedOnceExactly()
 			);
 	}
 
 	[Fact]
-	public async Task CallMoveLiveLogAfterTheOutcomeHandlerForFailedTasks()
+	public async Task CleanPendingArtifactsAfterTheOutcomeHandlerForFailedTasks()
 	{
 		currentOutcome = TaskOutcome.Failed;
 
@@ -470,21 +472,28 @@ public class ProcessTaskTests
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 			.MustHaveHappenedOnceExactly()
 			.Then(
-				A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
+				A.CallTo(() => cleanPendingArtifacts.Clean(A<TaskExecutionContext>._, A<TaskExecution>._, TaskOutcome.Failed))
+					.MustHaveHappenedOnceExactly()
 			);
 	}
 
 	[Fact]
-	public async Task MoveLiveLogReceivesTheSameContextAndTaskAsTheOutcomeHandler()
+	public async Task PassTheSameContextAndTaskToCleanPendingArtifacts()
 	{
 		await processTask.Run(context, taskFile);
 
-		A.CallTo(() => moveLiveLog.Move(context, A<TaskExecution>.That.Matches(t => t.TaskName == "01_MyTask.md")))
+		A.CallTo(() =>
+				cleanPendingArtifacts.Clean(
+					context,
+					A<TaskExecution>.That.Matches(t => t.TaskName == "01_MyTask.md"),
+					A<TaskOutcome>._
+				)
+			)
 			.MustHaveHappenedOnceExactly();
 	}
 
 	[Fact]
-	public async Task RunGitWorkflowAfterMoveLiveLogForDoneTasks()
+	public async Task RunGitWorkflowAfterCleanPendingArtifactsForDoneTasks()
 	{
 		currentOutcome = TaskOutcome.Done;
 
@@ -492,7 +501,10 @@ public class ProcessTaskTests
 
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._))
 			.MustHaveHappenedOnceExactly()
-			.Then(A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly())
+			.Then(
+				A.CallTo(() => cleanPendingArtifacts.Clean(A<TaskExecutionContext>._, A<TaskExecution>._, A<TaskOutcome>._))
+					.MustHaveHappenedOnceExactly()
+			)
 			.Then(
 				A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
 			);
@@ -530,14 +542,14 @@ public class ProcessTaskTests
 	}
 
 	[Fact]
-	public async Task MoveLiveLogStillRunsBeforeGitWorkflowEvenWhenGitWorkflowFails()
+	public async Task CleanPendingArtifactsStillRunsBeforeGitWorkflowEvenWhenGitWorkflowFails()
 	{
 		currentOutcome = TaskOutcome.Done;
 		gitDecision = TaskProcessingDecision.Stop;
 
 		await processTask.Run(context, taskFile);
 
-		A.CallTo(() => moveLiveLog.Move(A<TaskExecutionContext>._, A<TaskExecution>._))
+		A.CallTo(() => cleanPendingArtifacts.Clean(A<TaskExecutionContext>._, A<TaskExecution>._, A<TaskOutcome>._))
 			.MustHaveHappenedOnceExactly()
 			.Then(
 				A.CallTo(() => runGitWorkflow.Run(A<TaskExecutionContext>._, A<TaskExecution>._)).MustHaveHappenedOnceExactly()
