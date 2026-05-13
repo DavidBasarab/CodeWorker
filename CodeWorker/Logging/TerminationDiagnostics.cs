@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
@@ -13,6 +14,7 @@ public static class TerminationDiagnostics
 		TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 		AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 		Console.CancelKeyPress += OnCancelKeyPress;
+		AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
 
 		RegisterPosixSignal(PosixSignal.SIGTERM);
 		RegisterPosixSignal(PosixSignal.SIGINT);
@@ -53,6 +55,13 @@ public static class TerminationDiagnostics
 	private static void OnCancelKeyPress(object sender, ConsoleCancelEventArgs args)
 	{
 		Log.Warning("CancelKeyPress received SpecialKey={SpecialKey} Cancel={Cancel}", args.SpecialKey, args.Cancel);
+	}
+
+	private static void OnFirstChanceException(object sender, FirstChanceExceptionEventArgs args)
+	{
+		var firstChanceLogger = new FirstChanceExceptionLogger(Log.Logger);
+
+		firstChanceLogger.Log(args.Exception);
 	}
 
 	private static void RegisterPosixSignal(PosixSignal signal)
