@@ -6,9 +6,9 @@
 - Use explicit types only when the type is not clear from the right-hand side.
 
 ## Nullable Reference Types
-- Use nullable annotations (`?`) only where a value is genuinely optional or nullable — for example, generic return types (`T?`), reflection-heavy code, or extension methods that accept null input by design.
-- Do not annotate defensively. If a value cannot be null in normal usage, do not mark it nullable.
-- Do not write `string?`, `ILogger?`, or other nullable annotations on injected dependencies or values that are always populated.
+- This project builds with `<Nullable>disable</Nullable>`. Nullable reference-type annotations (`string?`, `ILogger?`) are not part of the codebase — do not add them to reference types.
+- The `?` annotation is still meaningful on value types (`int?`, `DateTime?`) — use it there only where a value is genuinely optional.
+- Do not annotate defensively, and do not sprinkle null checks on values that are always populated. If a value cannot be null in normal usage, treat it as non-null.
 
 ## Collection Initialization
 - Use collection expressions (`[]`) to initialize collections. Do not use `new List<T>()`, `new T[0]`, or `new Dictionary<K, V>()` when an empty or inline-populated collection is needed.
@@ -33,15 +33,23 @@ This applies to property initializers, field initializers, local variables, and 
 - Never use a plain `Dictionary` with manual locking for this purpose.
 
 ## Lazy Initialization
-- Use `Lazy<T>` for thread-safe singleton initialization when a value is expensive to compute or must be deferred.
-- Always use the factory constructor overload: `new Lazy<T>(() => ...)`.
+- The default lazy pattern uses the C# `field` keyword with null-coalescing assignment in a property getter. This is preferred over `Lazy<T>` for ordinary deferred initialization:
+
+```csharp
+public IReadOnlyList<string> AllWords
+{
+    get { return field ??= LoadWords(); }
+}
+```
+
+- Use `Lazy<T>` only when you genuinely need its thread-safety guarantees (e.g. a value that may be initialized concurrently and must run the factory exactly once). When you do, use the factory constructor overload: `new Lazy<T>(() => ...)`.
 
 ## Records — BANNED
 - Records are banned. Use classes only.
 
 ## Access Modifiers
 - Public is the default. Do not add access modifiers to restrict visibility unless there is a specific reason.
-- ReSharper enforces readonly and auto-properties — follow its guidance.
+- `dotnet format` (via `.editorconfig`) enforces readonly and auto-properties — follow its guidance.
 
 ## Constructor Injection Only
 - All dependencies are injected via the constructor. No property injection. No setter injection.
@@ -50,107 +58,61 @@ This applies to property initializers, field initializers, local variables, and 
 
 ```csharp
 // Correct — primary constructor
-public class FactoryResetEndpoint(IRunExecuteMacrium executeMacrium,
-                                   IThread thread,
-                                   ILogger logger) : HaivisionApiEndpoint
+public class CommandResolver(
+    IRunSetupCommand setupCommand,
+    IRunTaskCommand runTaskCommand,
+    IRunInfoCommand infoCommand,
+    IRunHelpCommand helpCommand
+) : IResolveCommand
 {
-    // executeMacrium, thread, logger are available directly
+    // setupCommand, runTaskCommand, infoCommand, helpCommand are available directly
 }
 
 // Wrong — traditional explicit constructor
-public class FactoryResetEndpoint : HaivisionApiEndpoint
+public class CommandResolver : IResolveCommand
 {
-    private readonly IRunExecuteMacrium executeMacrium;
-    private readonly IThread thread;
+    private readonly IRunSetupCommand setupCommand;
+    private readonly IRunTaskCommand runTaskCommand;
 
-    public FactoryResetEndpoint(IRunExecuteMacrium executeMacrium, IThread thread)
+    public CommandResolver(IRunSetupCommand setupCommand, IRunTaskCommand runTaskCommand)
     {
-        this.executeMacrium = executeMacrium;
-        this.thread = thread;
+        this.setupCommand = setupCommand;
+        this.runTaskCommand = runTaskCommand;
     }
 }
 ```
 
-## Autofac Module Registration
-All dependency registration uses Autofac `Module` classes. Each service project has one `*Module : Module` class with a `Load(ContainerBuilder builder)` override.
+## Autofac Registration — SystemScope Scanning + CodeWorkerModule
+Dependency wiring is bootstrapped by FatCat's `SystemScope`, which scans the application assemblies at startup (`Program.Main`) and auto-registers every interface that has a single implementation. A single `CodeWorkerModule : Module` registers only what scanning cannot infer.
 
 ### When to register in the module
-Only add a registration to the module when there are **multiple implementations of the same interface** and you need to override the default. Autofac automatically resolves a single implementation of an interface — no module entry is required for one-to-one mappings.
-
-Add to the module when:
-- A service project provides its own implementation of an interface that already has a default implementation elsewhere (e.g. `IDoSomeAction` is implemented in Common as `DoSomeAction`, but this service needs `DoOtherAction` instead — register `DoOtherAction` in the module to override)
+Only add a registration when scanning cannot resolve the type on its own. Add to the module when:
+- There are **multiple implementations of the same interface** and you need to choose or override one
+- A specific pre-built instance must be registered (e.g. the configured Serilog `ILogger`)
 - The type requires `.SingleInstance()` lifetime that cannot be inferred automatically
 - The type requires a factory method for construction (`.Factory` pattern)
 - The type is an open generic requiring `RegisterGeneric`
 
-Do NOT add to the module when:
-- There is exactly one implementation of the interface in the container — Autofac resolves it automatically
+Do NOT add to the module when there is exactly one implementation of the interface in the container — `SystemScope` resolves it automatically.
 
 ### Rules
 - Always register as the interface: `builder.RegisterType<MyClass>().As<IMyCapability>()`
-- Add `.SingleInstance()` only when the type is genuinely stateless and safe to share across all requests
-- Use `RegisterGeneric` for open generic types: `builder.RegisterGeneric(typeof(CreateOperation<,,>)).As(typeof(ICreateOperation<,,>))`
+- Add `.SingleInstance()` only when the type is genuinely stateless and safe to share
+- Use `RegisterGeneric` for open generic types: `builder.RegisterGeneric(typeof(MyOperation<,>)).As(typeof(IMyOperation<,>))`
 - Mark the module class `[ExcludeFromCodeCoverage]` — it contains no testable logic
 - Do not register the concrete type without `.As<IInterface>()` unless there is an explicit reason
-- For classes that require a factory method for construction, use a static `.Factory` method on the class and register it via `builder.Register(MyClass.Factory)`:
-- Use `.OnActivated(handler)` when a type needs initialization that cannot happen in its constructor — for example, calling a method on an open generic after resolution. The handler receives `IActivatedEventArgs<object>` and can use `args.Instance`, `args.Context`, and reflection to invoke the initialization. Use this sparingly; prefer constructor injection for all normal dependencies.
+- For classes that require a factory method for construction, use a static `.Factory` method on the class and register it via `builder.Register(MyClass.Factory)`
 
 ```csharp
-// Common project — default implementation, resolved automatically (no module entry needed)
-public class DoSomeAction : IDoSomeAction { ... }
-
-// This service project — overrides the default; must be registered in the module
-public class DoOtherAction : IDoSomeAction { ... }
-
 [ExcludeFromCodeCoverage]
-public class ManagerModule : Module
+public class CodeWorkerModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
-        // Required: overrides the Common default for IDoSomeAction
-        builder.RegisterType<DoOtherAction>().As<IDoSomeAction>();
+        var logger = SerilogConfiguration.Initialize();
 
-        // Required: SingleInstance lifetime cannot be inferred
-        builder.RegisterType<PermissionGroup>().As<IPermissionGroup>().SingleInstance();
-
-        // Required: open generic
-        builder.RegisterGeneric(typeof(CreateOperation<,,>)).As(typeof(ICreateOperation<,,>));
-
-        // Required: factory method construction
-        builder.Register(CineAgentCache.Factory).SingleInstance();
-    }
-}
-```
-
-## AutoMapper — IConfigureMappings
-Each service project has exactly one `*MapperInitialization` class that implements `IConfigureMappings`. It is the single place where all AutoMapper profiles for that service are configured.
-
-Rules:
-- Mark the class `[ExcludeFromCodeCoverage]` — it contains no testable logic
-- Implement `SetMappings(IProfileExpression configuration)` as the single public method
-- Organize mappings into private `Configure*` methods grouped by domain area
-- Use `.ConvertUsing<TConverter>()` for complex type conversions that need their own class
-- Use `[UsedImplicitly]` on event consumer classes that are invoked via reflection — this suppresses the ReSharper unused-type warning
-
-```csharp
-[ExcludeFromCodeCoverage]
-public class ManagerMapperInitialization : IConfigureMappings
-{
-    public void SetMappings(IProfileExpression configuration)
-    {
-        ConfigureAssetMappings(configuration);
-        ConfigureCanvasMappings(configuration);
-    }
-
-    private void ConfigureAssetMappings(IProfileExpression configuration)
-    {
-        configuration.CreateMap<AssetData, AssetServiceModel>();
-        configuration.CreateMap<AssetRequest, AssetData>().ConvertUsing<AssetRequestConverter>();
-    }
-
-    private void ConfigureCanvasMappings(IProfileExpression configuration)
-    {
-        configuration.CreateMap<CanvasData, CanvasServiceModel>();
+        // A specific pre-built instance — scanning cannot construct this
+        builder.RegisterInstance(logger).As<ILogger>().SingleInstance();
     }
 }
 ```
@@ -161,6 +123,29 @@ public class ManagerMapperInitialization : IConfigureMappings
 - CSharpier handles formatting — write readable code and let it format.
 
 ## IThread — Threading Abstraction
-- Threading and sleep operations use `IThread`. Never use `Task` or `Thread` directly.
+- Threading and sleep operations use `IThread` (from `FatCat.Toolkit.Threading`). Never use `Task.Delay`, `Thread.Sleep`, or raw `Thread` directly.
 - `IThread` is injected via constructor like all other dependencies.
-- `FakeThread` provides a synchronous substitute for unit tests.
+- `FakeThread` (also from `FatCat.Toolkit.Threading`) provides a synchronous substitute for unit tests — see `testing.md`.
+
+## IClock — Time Abstraction
+- Where the current time drives testable logic, inject `IClock` and read `clock.UtcNow` instead of calling `DateTime.UtcNow` directly. `SystemClock` is the production implementation; injecting the abstraction is what makes time-sensitive assertions deterministic.
+- The exception is low-level or `[ExcludeFromCodeCoverage]` plumbing (e.g. process runners and transcript tailers) where a raw `DateTime.UtcNow` timestamp carries no branching logic.
+
+## SystemScope — Container Bootstrap & Late Resolution
+- `SystemScope` (FatCat, `FatCat.Toolkit.Injection`) bootstraps the Autofac container in `Program.Main` (`SystemScope.Initialize(...)`) and resolves the root `CodeWorkerApplication` (`SystemScope.Container.Resolve<CodeWorkerApplication>()`).
+- Use it only for that root resolution, or for genuine runtime resolution when a type truly must be chosen at run time.
+- Do NOT use `SystemScope` / `ISystemScope` as a service locator to dodge constructor injection. If a class always needs the same dependency, inject it — as `CommandResolver` injects every command it can dispatch to.
+
+## C# 14 / net10 Features
+- The target framework is `net10.0` with the default language version.
+- The `field` keyword is accepted in property getters for backing-field initialization (`field ??= ...`) and in computed properties that need to cache.
+- Extension blocks (`extension(TargetType target) { ... }`) are accepted for grouping multiple extension methods on the same type.
+- Use these features where they read more clearly — not gratuitously.
+
+## FatCat Ecosystem
+CodeWorker depends on the FatCat toolkit for several core capabilities. Use these instead of rolling your own or pulling in equivalents:
+- `IThread` / `FakeThread` (`FatCat.Toolkit.Threading`) — threading and sleep abstraction
+- `IFileSystemTools` (`FatCat.Toolkit`) — file system operations
+- `ConsoleLog` (`FatCat.Toolkit.Console`) — colour-coded console output
+- `SystemScope` / `ISystemScope` (`FatCat.Toolkit.Injection`) — Autofac container bootstrap and late resolution
+- `Faker.Create<T>()` (`FatCat.Fakes`) — random test data generation
