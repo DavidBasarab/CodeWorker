@@ -11,33 +11,81 @@
 - Test names are sentences describing the expected behavior.
 
 ```csharp
-[Fact] public void BeAPost() { ... }
-[Fact] public void ExecuteTheResetToFactory() { ... }
-[Fact] public void ReturnOk() { ... }
+[Fact] public void ResolveTheCommandFromArgs() { ... }
+[Fact] public void ExecuteTheResolvedCommand() { ... }
+[Fact] public void ReturnDoneWhenExitCodeIsZero() { ... }
 ```
 
 ## Test Stack
 - Framework: xUnit
 - Faking: FakeItEasy (`A.Fake<T>()`, `A.CallTo()`)
-- Assertions: FluentAssertions (`.Should()`, `.BeOk()`, `.BePost()`)
-- Base class: `BddBase` — always use the non-generic form. Do not use `BddBase<T>`.
-- Thread substitute: `FakeThread` (runs IThread operations synchronously in tests)
-- Test data: `Faker.Create<T>()` for generating test objects — do not hard-code values
+- Assertions: FluentAssertions (`.Should()`, `.Be()`, `.BeEquivalentTo()`, etc.)
+- Thread substitute: `FakeThread` (from `FatCat.Toolkit.Threading` — runs `IThread` operations synchronously in tests)
+- Test data: `Faker.Create<T>()` (from `FatCat.Fakes`) for generating test objects — do not hard-code values
 
-## Global Usings
-Each test project has a single `GlobalUsings.cs` file that declares `global using` directives for the test stack. Production code does NOT use global usings.
+## Test Class Layout — One Plain Class Per Class Under Test
+Each class under test has one plain test class named `<Class>Tests`. There is no abstract base and no `Specs` folder. Fakes and the system under test are held in `private readonly` fields, populated with `A.Fake<T>()` or `Faker.Create<T>()`. The system under test is constructed in the test class constructor, where default fake behaviour is also configured:
 
 ```csharp
-// GlobalUsings.cs — test project only
+using FatCat.CodeWorker.Commands;
+using Serilog;
+
+namespace Testing.FatCat.CodeWorker;
+
+public class CodeWorkerApplicationTests
+{
+    private readonly IResolveCommand resolveCommand;
+    private readonly ICommand resolvedCommand;
+    private readonly ILogger logger;
+    private readonly CodeWorkerApplication application;
+
+    public CodeWorkerApplicationTests()
+    {
+        resolveCommand = A.Fake<IResolveCommand>();
+        resolvedCommand = A.Fake<ICommand>();
+        logger = A.Fake<ILogger>();
+
+        A.CallTo(() => resolveCommand.Resolve(A<string[]>._)).Returns(resolvedCommand);
+
+        application = new CodeWorkerApplication(resolveCommand, logger);
+    }
+
+    [Fact]
+    public async Task ResolveTheCommandFromArgs()
+    {
+        var args = new[] { "setup", @"C:\Projects\my-api" };
+
+        await application.DoWork(args);
+
+        A.CallTo(() => resolveCommand.Resolve(args)).MustHaveHappenedOnceExactly();
+    }
+}
+```
+
+## Global Usings
+Each test project has a single `GlobalUsings.cs` file that declares `global using` directives for the test stack. Production projects rely on `ImplicitUsings` instead — they do not carry a `GlobalUsings.cs`.
+
+```csharp
+// GlobalUsings.cs — test project
 global using System.Threading.Tasks;
 global using FakeItEasy;
+global using FatCat.CodeWorker;
 global using FatCat.Fakes;
 global using FluentAssertions;
-global using Haivision.Tests;
 global using Xunit;
 ```
 
-Add project-specific namespaces that appear in nearly every test file in the same project. Do not use global usings in production code.
+Add project-specific namespaces that appear in nearly every test file in the same project.
+
+## Test Method Naming — Verb-First
+`[Fact]` methods are named as bare verb phrases describing the observable behaviour, with no `Should`, no underscores, no Given/When/Then:
+
+```csharp
+[Fact] public void ResolveTheCommandFromArgs() { ... }
+[Fact] public void ExecuteTheResolvedCommand() { ... }
+[Fact] public void LogWelcomeMessage() { ... }
+[Fact] public void ResolveRunCommandWhenNoArgumentsProvided() { ... }
+```
 
 ## Expression-Bodied Members in Tests — BANNED
 The expression-bodied member ban applies to test code too. All test methods and constructors must use block bodies:
@@ -45,15 +93,15 @@ The expression-bodied member ban applies to test code too. All test methods and 
 ```csharp
 // Wrong
 [Fact]
-public void ReturnOk() => result.Should().BeOk();
+public void ExecuteTheResolvedCommand() => A.CallTo(() => resolvedCommand.Execute(args)).MustHaveHappenedOnceExactly();
 
 public MyTests() => sut = new MySut(fake);
 
 // Correct
 [Fact]
-public void ReturnOk()
+public void ExecuteTheResolvedCommand()
 {
-    result.Should().BeOk();
+    A.CallTo(() => resolvedCommand.Execute(args)).MustHaveHappenedOnceExactly();
 }
 
 public MyTests()
@@ -73,22 +121,21 @@ public MyTests()
 
 ```csharp
 // In constructor:
-private SomeType currentResult;
-A.CallTo(() => repo.Get(...)).ReturnsLazily(() => currentResult);
+private TaskOutcome currentOutcome;
+A.CallTo(() => classifyTaskResult.Classify(A<ProcessResult>._)).ReturnsLazily(() => currentOutcome);
 
 // In each test — just set the field:
-currentResult = new SomeType { ... };
+currentOutcome = TaskOutcome.Blocked;
 ```
 
 - This avoids reconfiguring fakes per test and keeps each test focused on its scenario.
 - Document any non-trivial fake behavior so future maintainers understand the intent.
 
 ## Test Project Conventions
-- Test class name = source class name + `Tests`
-- Test namespace mirrors source namespace with `Tests.` prepended
-- Example: `Haivision.Initialize.Endpoints.FactoryResetEndpoint` →
-  `Tests.Haivision.Initialize.Endpoints.FactoryResetEndpointTests`
-- There is always a direct 1-to-1 correspondence between a class and its test class.
+- Test class name = source class name + `Tests`. There is a direct 1-to-1 correspondence between a class under test and its test class.
+- Test namespace mirrors the source namespace with `Testing.` prepended (note: `Testing.`, not `Tests.`).
+- Example: `FatCat.CodeWorker.Commands.Info.InfoCommand` →
+  `Testing.FatCat.CodeWorker.Commands.Info.InfoCommandTests`.
 
 ## Testing and IThread
 - In tests, inject `FakeThread` instead of a real `IThread` implementation.
@@ -98,13 +145,15 @@ currentResult = new SomeType { ... };
 
 ## Low-Level API Implementations — No Unit Tests Required
 - Classes that talk directly to a low-level external system do not require unit tests.
-- Examples: Win32 P/Invoke wrappers, direct MongoDB driver calls, raw OS or hardware APIs.
+- Examples: `System.Diagnostics.Process` wrappers, direct `System.IO.File`/`Directory` calls, raw OS APIs.
 - These classes exist to satisfy an interface boundary — the interface is tested via fakes everywhere it is consumed.
 - Mark the class with `[ExcludeFromCodeCoverage]` and a `Justification` that explains why.
 
 ```csharp
-[ExcludeFromCodeCoverage(Justification = "Direct wrapper over the MongoDB driver — no business logic, tested via IMongoRepository fakes in consuming classes.")]
-public class MongoRepository(IMongoClient client) : IMongoRepository
+[ExcludeFromCodeCoverage(
+    Justification = "Direct wrapper over System.Diagnostics.Process — no business logic, tested via IRunProcess fakes in consuming classes."
+)]
+public class RunProcess(ILogger logger) : IRunProcess
 {
     // ...
 }

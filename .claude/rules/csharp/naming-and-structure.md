@@ -10,7 +10,7 @@
 
 ## Naming Rules
 - Avoid abbreviations. Prefer full words so readers never have to guess meaning.
-- Acceptable abbreviations: widely recognized acronyms (e.g. `HTTP`, `URL`, `ID`) and any abbreviation that appears among the top 3 Google results for that term. When in doubt, use the full word.
+- Acceptable abbreviations: widely recognized acronyms (e.g. `HTTP`, `URL`, `ID`, `CLI`) and any abbreviation that appears among the top 3 Google results for that term. When in doubt, use the full word.
 - Names reveal intent. A method name makes it unnecessary to read the body.
 - No comments explaining what code does — rename until it is obvious.
 - PascalCase: classes, interfaces, methods, properties, constants
@@ -41,88 +41,134 @@
 
 ```csharp
 // Correct — switch expression
-var result = assetType switch
+var handler = taskOutcome switch
 {
-    AssetType.Image => ProcessImage(asset),
-    AssetType.Video => ProcessVideo(asset),
-    _ => throw new ArgumentOutOfRangeException(nameof(assetType)),
+    TaskOutcome.Done => doneHandler,
+    TaskOutcome.Blocked => blockedHandler,
+    TaskOutcome.Failed => failedHandler,
+    _ => throw new ArgumentOutOfRangeException(nameof(taskOutcome)),
 };
 
 // Wrong — if/else chain
-if (assetType == AssetType.Image) result = ProcessImage(asset);
-else if (assetType == AssetType.Video) result = ProcessVideo(asset);
+if (taskOutcome == TaskOutcome.Done) handler = doneHandler;
+else if (taskOutcome == TaskOutcome.Blocked) handler = blockedHandler;
 ```
+
+The `CommandResolver` dispatch on `args[0]` is the canonical example of this in the codebase — a switch expression mapping each verb to a command, with a default arm.
 
 ## Files & Namespaces
 - One class per file. File named after the class, never the interface.
 - When a class directly implements a single interface, the interface and class live in the same file — named after the class. Do not create a separate file for the interface.
 - Only create a standalone interface file when the interface has multiple implementations or is consumed without a single obvious implementation.
 - Namespace must exactly match the folder path within the project. No exceptions.
-- Test project mirrors source project: same folder structure, same namespace with `Tests.` prepended.
+- All production namespaces start with `FatCat.CodeWorker.*` (e.g. `FatCat.CodeWorker.Commands`, `FatCat.CodeWorker.Commands.Run`, `FatCat.CodeWorker.History`, `FatCat.CodeWorker.Logging`).
+- Test project mirrors source project: same folder structure, same namespace with the `Testing.` prefix — `FatCat.CodeWorker.Commands.Info` → `Testing.FatCat.CodeWorker.Commands.Info`.
 - Always use file-scoped namespaces (C# 10+). Never use block-style `namespace X { }`.
 
 ```csharp
 // Correct — file-scoped
-namespace Haivision.Manager.AssetManager;
+namespace FatCat.CodeWorker.Commands.Info;
 
-public class DeleteAssetEndpoint { }
+public class InfoCommand { }
 
 // Wrong — block-scoped
-namespace Haivision.Manager.AssetManager
+namespace FatCat.CodeWorker.Commands.Info
 {
-    public class DeleteAssetEndpoint { }
+    public class InfoCommand { }
 }
 ```
 
-## Endpoint Pattern
+## Command Pattern
 
-1. **Return `HaiResult`.** All endpoint action methods return `HaiResult` or `Task<HaiResult>`. Never return raw ASP.NET Core types (`IActionResult`, `Ok<T>()`, etc.).
-
-2. **Interface only when reused.** An endpoint does not need an interface by default. Only add one when another part of the codebase needs to call the endpoint's logic directly (e.g. one service calling into another). When an interface is needed, define it in the same file immediately above the class:
+CodeWorker is a console application. Every user-invokable action is an `ICommand`, and `args[0]` selects which one runs.
 
 ```csharp
-// Only add this when something else needs to call RestartServer logic directly
-public interface IRestartServer
+public interface ICommand
 {
-    HaiResult Restart();
-}
-
-public class RestartServerEndpoint(IRebootServer rebootServer) : HaivisionApiEndpoint, IRestartServer
-{
-    ...
+    Task Execute(string[] args);
 }
 ```
 
-If the endpoint is only ever called via HTTP and nothing injects `IRestartServer`, no interface is needed.
+1. **One command per verb, one file per command.** A command class handles a single CLI verb (`setup`, `track`, `list`, `info`, `run-task`, `help`, …) and lives in its own folder under `Commands/` named after the feature. The file is named after the class.
 
-3. **Mutable state fields for request context.** When an endpoint breaks its logic into multiple private helper methods, it may use non-`readonly` private fields to share working state across those methods within a single request. These fields are intentionally mutable and are not injected — they are populated during the request:
+2. **Capability interface extends `ICommand`.** Each command exposes a narrow marker interface that extends `ICommand`, so the container can inject and the resolver can dispatch by role rather than by concrete type. Define it in the same file, immediately above the class:
 
 ```csharp
-public class DeleteAssetEndpoint(IMongoRepository<AssetData> mongo) : HaivisionApiEndpoint
-{
-    private AssetData asset;   // request working state — intentionally NOT readonly
+namespace FatCat.CodeWorker.Commands.Info;
 
-    [HttpDelete("Asset/{assetId}")]
-    public async Task<HaiResult> DeleteAsset(string assetId)
+public interface IRunInfoCommand : ICommand { }
+
+public class InfoCommand(ILoadRunHistory loadRunHistory, ILogger logger) : IRunInfoCommand
+{
+    public async Task Execute(string[] args)
     {
-        await LoadAsset(assetId);
-        if (asset == null) return NotFound();
-        return await DeleteLoadedAsset();
+        ...
+    }
+}
+```
+
+3. **Resolution is a switch expression.** New verbs are wired into `CommandResolver.Resolve` — a switch expression over `args[0].ToLowerInvariant()` with a default arm. Inject the new command's capability interface into `CommandResolver`; do not new it up.
+
+```csharp
+return args[0].ToLowerInvariant() switch
+{
+    "setup" => setupCommand,
+    "info" => infoCommand,
+    ...
+    _ => runTaskCommand,
+};
+```
+
+4. **Positional arguments.** Commands read their own arguments from the `args` array (e.g. `args.Length > 1 ? args[1] : default`). Keep argument parsing inside the command; do not spread it across helpers unless it earns its own well-named method.
+
+5. **Mutable state fields for working context.** When a command or a processing class breaks its logic into multiple private helper methods, it may use non-`readonly` private fields to share working state across those methods within a single invocation. These fields are intentionally mutable and are not injected — they are populated during execution. Nullable reference types are disabled in this project, so declare them plainly (no `null!`):
+
+```csharp
+public class ProcessTask(IDiscoverTasks discoverTasks, IClassifyTaskResult classifyTaskResult, ILogger logger)
+{
+    private TaskExecutionContext context;   // working state — intentionally NOT readonly
+
+    public async Task Process(string repositoryPath)
+    {
+        context = await BuildContext(repositoryPath);
+
+        await RunAndClassify();
     }
 
-    private async Task LoadAsset(string assetId) { asset = await mongo.GetById(assetId); }
-
-    private async Task<HaiResult> DeleteLoadedAsset() { ... }
+    private async Task RunAndClassify() { ... }
 }
 ```
 
-This pattern avoids passing many parameters between helper methods. It is only valid within an endpoint class where the lifetime of the object is a single HTTP request.
+This pattern avoids passing many parameters between helper methods. It is only valid within a class whose lifetime is a single unit of work.
+
+## Type-Role Suffix Conventions
+The codebase uses a consistent vocabulary of type-role suffixes. Pick the existing suffix for the role — do not invent new ones.
+
+| Suffix | Role |
+|---|---|
+| `*Command` | A CLI command (`ICommand` implementation) — one per verb |
+| `*Entry` | A persisted record (JSONL run-history line), e.g. `RunHistoryEntry`, `RepositoryRunHistoryEntry` |
+| `*Result` | An outcome value returned from an operation, e.g. `RepositoryValidationResult` |
+| `*Context` | Working state passed through a single unit of work, e.g. `TaskExecutionContext` |
+| `*Heuristic` | A rule that classifies a task result, e.g. `TokenLimitHeuristic`, `TimedOutHeuristic` |
+| `*Handler` | An `ITaskOutcomeHandler` for a `TaskOutcome`, e.g. `HandleDoneTaskOutcome` |
+| `*Factory` | A type that constructs another based on runtime input, e.g. `TaskOutcomeHandlerFactory` |
+| `*Module` | The Autofac `Module` for a project |
+
+Match the existing layout. Do not place a new command, heuristic, or handler in an arbitrary location.
+
+## Folder Conventions
+- `Commands/` — one sub-folder per feature/verb (`Setup/`, `Run/`, `Track/`, `Info/`, …), each holding that command and the helpers it owns.
+- `Commands/Run/Heuristics/` — task-result classification rules.
+- `Commands/Run/Outcomes/` — `ITaskOutcomeHandler` implementations and their factory.
+- `History/` — run-history persistence types.
+- `FileSystem/`, `Git/`, `Process/` — thin abstractions over the OS / external processes (see Interfaces below).
+- `Logging/`, `Settings/` — Serilog configuration and app/repository settings.
 
 ## Interfaces
 - All interfaces use the `I` prefix.
-- Interface names describe a capability or action: `IClearDatabase`, `IRunExecuteMacrium`, `IRestoreBackup`.
-- NOT: `IDatabase`, `IMacrium`, `IBackupService` — these describe what something is, not what it does.
+- Interface names describe a capability or action: `IResolveCommand`, `ISetupRepository`, `ILoadRunHistory`, `IClassifyTaskResult`, `IDiscoverTasks`, `IRunGitWorkflow`.
+- NOT: `ICommandResolver`, `IRepository`, `IHistory` — these describe what something is, not what it does. (The `*Command` marker interfaces like `IRunInfoCommand` are the deliberate exception: they name the command's role and extend `ICommand`.)
 - Default to narrow, single-purpose interfaces. One interface = one capability.
-- Exception: highly cohesive groups (e.g. all REST calls to the same API resource) may be grouped: `IManagerApi`.
-- All cross-boundary dependencies must be interfaces: threading, file system, time, external processes, REST clients.
+- All cross-boundary dependencies must be interfaces: the file system, git, external process execution (the Claude CLI), threading, time. This is why `IFileSystemTools`, `IAppendFile`, `IGetWorkingDirectory`, and the git/process abstractions exist.
 - If something cannot be faked in a test, it is not properly abstracted.

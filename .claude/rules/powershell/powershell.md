@@ -2,9 +2,11 @@
 
 ## Scope
 These standards apply to all PowerShell scripts in this codebase. PowerShell is used for:
-- Build automation
+- Installation and update automation (e.g. `Install-CodeWorker.ps1`)
 - Windows environment configuration
-- Application API interaction and deployment automation
+- Scheduled / overnight task execution (e.g. `Run-ClaudeTask.ps1`)
+
+Always invoke PowerShell as `pwsh` (PowerShell 7) with the user profile loaded first (`. $PROFILE;`). Never use `powershell.exe` (PowerShell 5).
 
 ---
 
@@ -42,5 +44,3 @@ These standards apply to all PowerShell scripts in this codebase. PowerShell is 
 
 - PowerShell does not require tests. Do not write Pester tests or any other test framework for PowerShell scripts.
 - Testing is required for C# and TypeScript only.
-
-```powershell

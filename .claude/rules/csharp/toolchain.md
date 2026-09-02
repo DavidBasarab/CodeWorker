@@ -1,55 +1,59 @@
 # Toolchain
 
 ## CSharpier — Final Formatting Authority
-CSharpier is the single source of truth for all C# formatting in this codebase.
-- Configuration: `printWidth: 128`, `useTabs: true`, `tabWidth: 4`
-- Runs automatically on build and on save.
+CSharpier owns **all** C# layout — braces, spacing, new lines, wrapping, single-line blocks. It is the single source of truth for formatting, and it is fully opinionated: it has no per-rule formatting switches.
+- Configuration: `.csharpierrc` at the repo root (CSharpier's primary config name, searched before `.editorconfig`) — `printWidth: 128`, `useTabs: true`, `indentSize: 4`.
+- CSharpier reads a small whitespace set from `.editorconfig` and keeps it in sync with `.csharpierrc`: `indent_style` (→ useTabs), `indent_size` (→ indentSize), `max_line_length` (→ printWidth), `end_of_line`, `insert_final_newline`, `charset`, `trim_trailing_whitespace`, `dotnet_sort_system_directives_first`, `dotnet_separate_import_directive_groups`. It **ignores** every `csharp_*` formatting key.
+- CSharpier.MsBuild is referenced, so it runs automatically on build.
 - **Never fight CSharpier.** If it reformats something, that is correct. Do not manually reformat to avoid it.
 - Write readable code — CSharpier handles the rest. Do not pre-format to match what you think CSharpier will do.
 
-## ReSharper / Rider — Profile: CineMassive_Default
-The team uses the `CineMassive_Default` ReSharper profile (legacy name, pre-acquisition). It enforces:
+## dotnet format — Style & Analyzer Enforcement (NOT formatting)
+`dotnet format` applies code-**style** and **analyzer** fixes only. Formatting/whitespace is CSharpier's job — never run the whitespace formatter, or it will fight CSharpier. Style/analyzer rules are driven by `.editorconfig`. It enforces:
 - Remove redundant code and unnecessary qualifiers
 - `var` everywhere (enforced)
 - Fields made `readonly` where possible (enforced)
 - **Block bodies only** — expression-bodied members (`=>`) are banned
 - String interpolation enforced over concatenation
 
-If ReSharper flags something, address it. Do not suppress warnings without reason.
-Suppression format when genuinely necessary:
-```csharp
-// ReSharper disable once <RuleName> — <reason>
+Run it before committing — style and analyzers only, never `whitespace`:
+```bash
+dotnet format style CodeWorker.sln                  # apply code-style fixes from .editorconfig
+dotnet format analyzers CodeWorker.sln              # apply analyzer fixes
+dotnet format style CodeWorker.sln --verify-no-changes   # CI / pre-commit gate
 ```
 
-## .editorconfig
-- Naming conventions are enforced as warnings via `.editorconfig`.
-- Namespace must match folder structure — enforced.
-- All files should be green (no unresolved warnings) unless suppressed with reason.
+If `dotnet format` changes something, that change is correct — do not revert it. Do not suppress an analyzer rule without a comment explaining why. Suppression format when genuinely necessary:
+```csharp
+#pragma warning disable <RuleId> // <reason>
+```
 
-## Pre-Commit Hook
-A pre-commit hook checks staged `.cs` files only (not React, TypeScript, or PowerShell).
-- Runs `csharpier --check` and `roslynator analyze`
-- Warns but does NOT block commits
-- Goal: all files green before merge
+## .editorconfig — Style Rules + CSharpier Whitespace Inputs
+- `.editorconfig` at the repo root holds two things only: (1) the whitespace keys CSharpier reads (Core EditorConfig Options), and (2) the code-style and naming rules `dotnet format` applies.
+- It declares **no** `csharp_*` formatting keys — that would be a second, conflicting formatting spec. CSharpier owns layout.
+- Naming conventions are enforced as warnings.
+- Namespace must match folder structure — enforced.
+- File-scoped namespaces, `var` preference, and the expression-bodied-method ban are all enforced here.
+- All files should be green (no unresolved warnings) unless suppressed with reason.
 
 ## Expression-Bodied Members — BANNED
 This applies to ALL members regardless of access modifier: public, private, protected, internal.
 **This ban also applies to test projects** — test methods and constructors must use block bodies too.
 Do not write:
 ```csharp
-public string Name => _name;                                    // banned
+public string Name => name;                                     // banned
 public void Reset() => Execute();                               // banned
-private Command360ServerState CurrentServerState => Get();      // banned
-private HaivisionServerType ServerType => GetServerType();      // banned
-public void WillReturnOk() => result.Should().BeOk();           // banned — even in tests
+private TaskOutcome CurrentOutcome => Classify();               // banned
+private RepositoryValidationResult Validation => Validate();    // banned
+public void WillReturnDone() => outcome.Should().Be(TaskOutcome.Done);   // banned — even in tests
 public MyTests() => sut = new MyClass();                        // banned — even in test constructors
 ```
 Always use block bodies:
 ```csharp
-public string Name { get { return _name; } }                    // correct
+public string Name { get { return name; } }                     // correct
 public void Reset() { Execute(); }                              // correct
-private Command360ServerState CurrentServerState { get { return Get(); } }         // correct
-private HaivisionServerType ServerType { get { return GetServerType(); } }         // correct
-public void WillReturnOk() { result.Should().BeOk(); }          // correct — test method
+private TaskOutcome CurrentOutcome { get { return Classify(); } }         // correct
+private RepositoryValidationResult Validation { get { return Validate(); } }  // correct
+public void WillReturnDone() { outcome.Should().Be(TaskOutcome.Done); }   // correct — test method
 public MyTests() { sut = new MyClass(); }                       // correct — test constructor
 ```
