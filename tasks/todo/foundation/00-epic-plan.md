@@ -51,7 +51,8 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
   parsed-arguments value carrying the three paths; each malformed invocation returns a specific,
   human-readable usage error value with a non-zero exit intent; unit-tested via faked file-system
   and the CLI dispatch.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/foundation/verify-command-surface/ -->
+- **Plan:** [`tasks/todo/foundation/verify-command-surface/`](verify-command-surface/00-overview.md)
+  — planned 2026-09-02 (task.md + 00-overview + 3 phases + orchestrator).
 
 ### 2. Intent contract model — `intent-contract-model`
 - **Scope:** Parse and validate the structured intent payload the AI submits —
@@ -120,10 +121,14 @@ commands." The CLI has no `ICommand`/`CommandResolver` today, so Foundation is w
 infrastructure is born — kept minimal (one command) but shaped like the main project's so the next
 command drops in cleanly.
 **Alternatives rejected:** a bespoke if/else in `ProcessArguments` (violates the switch-expression
-and command-pattern rules; doesn't scale to "several commands"); ripping out `IProcessArguments`
-and copying `CommandResolver` wholesale now (over-engineering for one command — grow it when the
-second command lands). **Flagged as an open question** — this materially shapes item 1's design;
-confirm before item 1 is planned in Mode B.
+and command-pattern rules; doesn't scale to "several commands").
+**Resolved (2026-09-02):** build the **full `ICommand` + resolver pattern** in the CLI now — a
+`verify` capability interface extending `ICommand`, resolved through a CLI `CommandResolver`
+switch-expression dispatched from `IProcessArguments.Process`, mirroring the main `CodeWorker`
+project. Rationale (user): more commands are planned, so standing the resolver up now removes the
+risk and cost of retrofitting one around a bespoke branch when the second command lands. Item 1
+therefore delivers this infrastructure (kept to the one `verify` command, shaped so the next drops
+in cleanly), not a branch inside `ProcessArguments`.
 
 ### ADR-G2 — Predictable failures are returned values, never exceptions
 **Decision:** Every foreseeable failure in the spine — bad args, missing/unreadable/invalid intent,
@@ -183,15 +188,16 @@ edited freely.
 
 ## Next item
 
-**`verify-command-surface`** — say **"plan verify command surface"** (or "plan the next foundation
-item") to expand it into its `task.md` + phased plan. **Resolve ADR-G1 first** (command-pattern
-dispatch shape) — it materially shapes that item.
+**`intent-contract-model`** (item 2) — say **"plan intent contract model"** (or "plan the next
+foundation item") to expand it. Item 1 (`verify-command-surface`) is **planned** (see its folder)
+and ready to build via **"run verify-command-surface"**; build it before planning item 2 so any
+command-surface shape change can be reconciled first (the one-at-a-time rule).
 
 ## Assumptions & open questions
 
-- **[Open — resolve before item 1] ADR-G1 dispatch shape.** Confirm that item 1 introduces the
-  `ICommand` + resolver pattern into the CLI (mirroring the main project) rather than branching
-  inside `ProcessArguments`. This changes item 1's file/interface layout.
+- **[Resolved 2026-09-02] ADR-G1 dispatch shape.** Item 1 introduces the full `ICommand` + resolver
+  pattern into the CLI (mirroring the main project) — not a branch inside `ProcessArguments`. Chosen
+  to avoid a future refactor as more commands are added. See ADR-G1.
 - **The CLI has no command infrastructure yet.** Item 1 is the first to add it; there is no
   existing CLI `ICommand`/`CommandResolver`/`CommandModule` to extend — only `IProcessArguments`.
 - **Engine seam ships without a real engine.** Item 5 delivers the seam + registration point; the
