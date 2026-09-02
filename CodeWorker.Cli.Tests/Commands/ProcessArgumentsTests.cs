@@ -1,35 +1,40 @@
 using FatCat.CodeWorker.Cli.Commands;
-using Serilog;
 
 namespace Testing.FatCat.CodeWorker.Cli.Commands;
 
 public class ProcessArgumentsTests
 {
-	private readonly ILogger logger;
+	private readonly IResolveCommand resolveCommand;
+	private readonly ICommand resolvedCommand;
 	private readonly ProcessArguments processArguments;
 
 	public ProcessArgumentsTests()
 	{
-		logger = A.Fake<ILogger>();
+		resolveCommand = A.Fake<IResolveCommand>();
+		resolvedCommand = A.Fake<ICommand>();
 
-		processArguments = new ProcessArguments(logger);
+		A.CallTo(() => resolveCommand.Resolve(A<string[]>._)).Returns(resolvedCommand);
+
+		processArguments = new ProcessArguments(resolveCommand);
 	}
 
 	[Fact]
-	public async Task LogWhenNoArgumentsProvided()
+	public async Task ResolveTheCommandFromArgs()
 	{
-		await processArguments.Process(Array.Empty<string>());
-
-		A.CallTo(() => logger.Information("No arguments provided")).MustHaveHappenedOnceExactly();
-	}
-
-	[Fact]
-	public async Task LogArgumentCountWhenArgumentsProvided()
-	{
-		var args = new[] { "greet", "world" };
+		var args = new[] { "verify", "--intent", "intent.json" };
 
 		await processArguments.Process(args);
 
-		A.CallTo(() => logger.Information(A<string>._, 2, A<string>._)).MustHaveHappenedOnceExactly();
+		A.CallTo(() => resolveCommand.Resolve(args)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task ExecuteTheResolvedCommand()
+	{
+		var args = new[] { "verify", "--intent", "intent.json" };
+
+		await processArguments.Process(args);
+
+		A.CallTo(() => resolvedCommand.Execute(args)).MustHaveHappenedOnceExactly();
 	}
 }
