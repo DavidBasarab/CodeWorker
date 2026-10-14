@@ -65,7 +65,7 @@ framework), or set the real process exit code / emit a verdict (item 4 — Verdi
 
 ## Feature Context
 
-- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md) — item 1, and the
+- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md) — item 1, and the
   group ADRs (ADR-G1 dispatch shape **resolved: full resolver pattern**; ADR-G2 values-not-exceptions;
   ADR-G3 folder layout; ADR-G4 plain classes; ADR-G5 capability interfaces + scanning).
 - Source of truth: [`CodeWorker.Cli/README.md`](../../../../CodeWorker.Cli/README.md).

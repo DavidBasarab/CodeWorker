@@ -1,7 +1,7 @@
 # verify-command-surface — Overview
 
 - **Work item:** `verify-command-surface` (Foundation item 1 — see
-  [`../00-epic-plan.md`](../00-epic-plan.md))
+  [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md))
 - **Source of truth:** `CodeWorker.Cli/README.md`
 - **Generated:** 2026-09-02-130729
 

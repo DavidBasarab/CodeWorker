@@ -51,7 +51,7 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
   parsed-arguments value carrying the three paths; each malformed invocation returns a specific,
   human-readable usage error value with a non-zero exit intent; unit-tested via faked file-system
   and the CLI dispatch.
-- **Plan:** [`tasks/todo/foundation/verify-command-surface/`](verify-command-surface/00-overview.md)
+- **Plan:** [`tasks/done/foundation/verify-command-surface/`](../../done/foundation/verify-command-surface/00-overview.md)
   — planned 2026-09-02 (task.md + 00-overview + 3 phases + orchestrator).
 
 ### 2. Intent contract model — `intent-contract-model`
