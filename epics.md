@@ -36,7 +36,7 @@ Groups below are in build order._
 
 ### Foundation (the pipeline spine)
 
-- [ ] **Verify command surface** — Add a `verify` command to `CodeWorker.Cli` on the existing `IProcessArguments` dispatch: parse the intent file, production file(s), and test file(s) from args; invalid input returns a clear usage error (a value, not an exception). _(Follows the command pattern in `.claude/rules/csharp/naming-and-structure.md`.)_
+- [x] **Verify command surface** — Add a `verify` command to `CodeWorker.Cli` on the existing `IProcessArguments` dispatch: parse the intent file, production file(s), and test file(s) from args; invalid input returns a clear usage error (a value, not an exception). _(Follows the command pattern in `.claude/rules/csharp/naming-and-structure.md`.)_
 - [ ] **Intent contract model** — The structured payload Claude submits (`why`, `class`, `responsibility`, `behaviors[]` of `{ behavior, test? }`) parsed and validated into a working-context object the pipeline consumes; a missing test file or unreadable intent is a returned error. _(README: The Intent Contract.)_
 - [ ] **Gate pipeline framework** — The `IVerificationGate` abstraction and the fail-fast runner: ordered gates, short-circuit on the first blocking failure, per-gate result (pass/fail, locations, reasons, timing). _(README: How It Works. The spine every gate plugs into.)_
 - [ ] **Verdict model + reporting** — Aggregate gate results into one verdict: a machine-readable JSON verdict for the hook and a human-readable report for the morning review. Exit code is 0 on green, non-zero on any block. _(README: Usage.)_

@@ -82,7 +82,7 @@ Grounded in `CodeWorker.Cli/README.md` and the current code:
   is no `epics.md` checkbox and no `00-epic-plan.md` to update for this item.
 - **Source of truth:** [`CodeWorker.Cli/README.md`](../../../../CodeWorker.Cli/README.md).
 - **The surface under test** was built by
-  [`tasks/todo/foundation/verify-command-surface/`](../../foundation/verify-command-surface/00-overview.md)
+  [`tasks/done/foundation/verify-command-surface/`](../../../done/foundation/verify-command-surface/00-overview.md)
   — see its ADR-5 (exit code deferred) and ADR-2 (unknown verb routes to verify).
 - **Standards:** every phase obeys `CLAUDE.md` and `.claude/rules/csharp/*.md` (xUnit + FluentAssertions,
   verb-first one-assertion tests, block bodies, `[ExcludeFromCodeCoverage]` for `System.Diagnostics.Process`
