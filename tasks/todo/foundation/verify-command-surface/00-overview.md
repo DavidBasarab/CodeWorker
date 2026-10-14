@@ -70,13 +70,38 @@ arguments) is a **returned value, never an exception**.
 Phases 1 and 2 are independent (2 does not touch anything 1 creates), so either can be reverted
 alone once 3 is reverted. Reverting 1 or 2 while 3 stands would break the build — revert 3 first.
 
+### Execution waves (parallel subagents)
+
+| Wave | Phases | Runs as |
+|---|---|---|
+| 1 | 1 and 2 | **Parallel** — two concurrent subagents, each in its own git worktree |
+| 2 | 3 | Single subagent on the task branch, after wave 1 is integrated |
+
+Wave 1 is safe to parallelize because the two phases touch **disjoint files**:
+
+| Phase 1 creates/modifies | Phase 2 creates |
+|---|---|
+| `CodeWorker.Cli/Commands/ICommand.cs` | `CodeWorker.Cli/Commands/Verify/VerifyUsageError.cs` |
+| `CodeWorker.Cli/Commands/CommandResolver.cs` | `CodeWorker.Cli/Commands/Verify/VerifyArgumentsResult.cs` |
+| `CodeWorker.Cli/Commands/ProcessArguments.cs` | `CodeWorker.Cli/Commands/Verify/ParseVerifyArguments.cs` |
+| `CodeWorker.Cli/Commands/Verify/VerifyCommand.cs` | `CodeWorker.Cli.Tests/Commands/Verify/ParseVerifyArgumentsTests.cs` |
+| `CodeWorker.Cli.Tests/Commands/CommandResolverTests.cs` | |
+| `CodeWorker.Cli.Tests/Commands/ProcessArgumentsTests.cs` | |
+| `CodeWorker.Cli.Tests/Commands/Verify/VerifyCommandTests.cs` | |
+
+Both phases add files under `Commands/Verify/`, but no file is shared, so their commits cherry-pick
+onto the task branch without conflict. If either phase's design changes to touch a file the other
+owns, Phase 2 must take a dependency on Phase 1 and the waves collapse to 1 → 2 → 3.
+
 ## Orchestrator
 
 `orchestrator.md` (this folder) is the runbook. Usage: open a Claude session in this repo and say
-**"run verify-command-surface"** — the session drives the phases in dependency order (1 → 2 → 3),
-each in a **fresh, isolated context** (one general-purpose subagent per phase; the phase file is
-the entire handoff), verifying exactly one new commit and a clean working tree after each phase,
-halting on failure. It never squashes, amends, rebases, or pushes.
+**"run verify-command-surface"** — the session drives the phases in **waves** (Phases 1 and 2 in
+parallel, then Phase 3), each phase in a **fresh, isolated context** (one general-purpose subagent
+per phase; the phase file is the entire handoff; parallel phases each get their own git worktree).
+It verifies exactly one new commit and a clean working tree per phase, cherry-picks the wave-1
+commits onto the task branch in phase order, proves the combined build and tests green, and halts
+on failure. It never squashes, amends, rebases, or pushes.
 
 ## Decisions (lightweight ADRs)
 

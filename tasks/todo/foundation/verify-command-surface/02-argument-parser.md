@@ -185,7 +185,8 @@ Phase 3).
       patterns
 - [ ] Review loop until all three pass clean, in order, restarting from the top after any fix:
       `unit-test-review` (must end `Unit test review: PASS`) → `code-review` → `code-security-review`
-- [ ] Exactly one commit on the current branch (`CliTester`), message referencing this file; **no push**
+- [ ] Exactly one commit on the current branch (`CliTester`, or the isolated worktree branch when the
+      orchestrator runs this phase in parallel wave 1), message referencing this file; **no push**
 
 Suggested commit message:
 

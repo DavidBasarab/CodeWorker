@@ -116,13 +116,14 @@ Write `00-overview.md` in the item folder, matching the Apostil overview shape:
 - **Work Item** — restate the scope and the *current state of the code* that shapes the design (verified against the actual files, not assumed).
 - **Acceptance Criteria → Phase Map** — a table mapping each acceptance criterion to the phase(s) that prove it.
 - **Phases & Dependency Graph** — a table: phase #, file, risk (low/medium/high), `Depends on`, `Depended on by`, plus the revert cascade in reverse dependency order.
+- **Execution waves** — the phases grouped into waves for parallel execution (see **Parallel execution rule** below): each wave lists its phases and, for any wave with more than one phase, the files each phase creates or modifies, proving the sets are disjoint.
 - **Orchestrator** — one line on how to run it (see 4d).
 - **Decisions (lightweight ADRs)** — per-item decisions: decision, context, alternatives rejected.
 - **Assumptions** and **Open Questions** — flag design-changing ambiguities; do not guess.
 
 ### 4c — Phase files (NN-<slug>.md)
 
-Split the item into a **handful of atomic phases** (≈3–6; `epics.md` says an epic that can't be is too big — flag it). Number them `01-…`, `02-…`. Each phase file must be, per `task.md` Phase Requirements:
+Split the item into a **handful of atomic phases** (≈3–6; `epics.md` says an epic that can't be is too big — flag it). Number them `01-…`, `02-…`. When choosing the split, **prefer independent phases with disjoint file sets** so they can run in parallel — do not invent a dependency just to keep a linear order, but never fake independence either (if two phases touch the same file, one depends on the other). Each phase file must be, per `task.md` Phase Requirements:
 
 - **Context-isolated** — the complete handoff; a fresh session with only this file can execute it.
 - **Atomic** — exactly one commit; the commit message references the phase file.
@@ -138,7 +139,20 @@ Follow the phase-file template below (adapted from Apostil `03-logging-level-end
 
 ### 4d — Orchestrator (orchestrator.md)
 
-Write `orchestrator.md` in the item folder: the runbook that executes the phases in dependency order, **one fresh general-purpose subagent per phase** (context isolation is not optional), verifying exactly one new commit and a clean working tree after each phase, halting on failure, never squashing/amending/rebasing/pushing. Trigger: "run <item-slug>". Model it on Apostil's `orchestrator.md` (ground rules, per-phase procedure, halt-on-failure, completion report).
+Write `orchestrator.md` in the item folder: the runbook that executes the phases in dependency order, **one fresh general-purpose subagent per phase** (context isolation is not optional), **running independent phases as parallel subagents** per the Parallel execution rule below, verifying exactly one new commit and a clean working tree after each phase, halting on failure, never squashing/amending/rebasing/pushing. Trigger: "run <item-slug>". Model it on Apostil's `orchestrator.md` (ground rules, per-wave procedure, halt-on-failure, completion report).
+
+### Parallel execution rule
+
+Use parallel subagents whenever the dependency graph allows it. The orchestrator executes the plan in **waves**, not one phase at a time:
+
+- **Wave construction.** A wave is every not-yet-run phase whose `Depends on:` phases have all completed. Phases in the same wave must create/modify **disjoint sets of files** — the overview's Execution waves table lists them. If two phases would touch the same file, they are not independent: add the dependency and put them in different waves.
+- **Single-phase wave.** Run it exactly as before: one fresh subagent, working directly on the task branch.
+- **Multi-phase wave.** Record `git rev-parse HEAD` as the wave base, then launch **one fresh subagent per phase in a single message** (so they run concurrently), each with `isolation: "worktree"` so it builds, tests, reviews, and commits in its own git worktree without colliding with its siblings. Each subagent makes exactly one commit on its worktree branch.
+- **Verify each worktree** once all subagents in the wave finish: the branch is exactly one commit ahead of the wave base (`git rev-list --count <base>..<branch>` is `1`), its working tree is clean, the commit message references the phase file, and the subagent did not report PHASE FAILED.
+- **Integrate onto the task branch** by `git cherry-pick`-ing each verified phase commit in **phase-number order** (one commit per phase is preserved — this is not a squash, amend, or rebase). Then run `dotnet build CodeWorker.sln` (zero warnings) and `dotnet test CodeWorker.sln` on the integrated branch; the phases were only proven individually, so the combination must be proven too. A cherry-pick conflict or a red build/test halts the pipeline.
+- **Clean up** the wave's worktrees and their branches (`git worktree remove <path>`, `git branch -D <branch>`) only after their commits are on the task branch.
+- **Failure inside a wave.** Integrate the phases that succeeded (they are independent), write the failure report for the ones that failed, and halt before the next wave. Never start a wave whose dependencies include a failed phase.
+- The orchestrator still never writes production code itself — parallelism changes how many subagents run at once, not who does the work.
 
 ### 4e — Update the epic plan
 
@@ -179,7 +193,7 @@ style. Name every file and its namespace. Note deviations to verify against the 
 - [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; build again so CSharpier applies
 - [ ] Namespaces match folder paths; one class per file; correct type-role suffixes; no banned patterns
 - [ ] Review loop until all three pass clean, restarting from the top after any fix: `unit-test-review` (must end `Unit test review: PASS`) → `code-review` → `code-security-review`
-- [ ] Exactly one commit on the current task branch, message referencing this file; no push
+- [ ] Exactly one commit on the current task branch (or on the isolated worktree branch when the orchestrator runs this phase in a parallel wave), message referencing this file; no push
 
 Suggested commit message:
 
@@ -211,6 +225,7 @@ this plan and why — an empty log is a claim, not a default); open questions/ri
 ## Hard rules for this skill
 
 - **Planning documents only. Never write production code, never edit source files, never commit, never run an orchestrator.** Those are separate, explicit steps the user drives.
+- **Parallel subagents when possible.** Every orchestrator runs independent phases (disjoint files, all dependencies met) concurrently, one isolated-worktree subagent each, per the Parallel execution rule. A strictly sequential orchestrator is only correct when the dependency graph is a chain.
 - **One item at a time.** In Mode B, expand exactly one checklist item. Never batch-expand the whole group into phase plans — that defeats the "don't stall" purpose.
 - **Never flip an `epics.md` checkbox to `[x]`.** That marks *built and merged* work; only the human does it after the item ships.
 - **Ground every plan in `CodeWorker.Cli/README.md` and `.claude/rules`.** Where the README and the code disagree, the code is authoritative — plan against the code and flag the stale README.
