@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWorker.Cli", "CodeWorke
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWorker.Cli.Tests", "CodeWorker.Cli.Tests\CodeWorker.Cli.Tests.csproj", "{D5445755-7B9E-4841-A4C2-FF0B3063E231}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeWorker.Cli.EndToEnd.Tests", "CodeWorker.Cli.EndToEnd.Tests\CodeWorker.Cli.EndToEnd.Tests.csproj", "{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{D5445755-7B9E-4841-A4C2-FF0B3063E231}.Release|x64.Build.0 = Release|Any CPU
 		{D5445755-7B9E-4841-A4C2-FF0B3063E231}.Release|x86.ActiveCfg = Release|Any CPU
 		{D5445755-7B9E-4841-A4C2-FF0B3063E231}.Release|x86.Build.0 = Release|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Debug|x64.Build.0 = Debug|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Debug|x86.Build.0 = Debug|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Release|x64.ActiveCfg = Release|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Release|x64.Build.0 = Release|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Release|x86.ActiveCfg = Release|Any CPU
+		{7B1BEB7E-3965-4C09-9F45-2F154AAA5E8E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
