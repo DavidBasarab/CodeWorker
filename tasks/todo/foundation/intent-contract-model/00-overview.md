@@ -143,8 +143,11 @@ list moving to the tool-level config is an Integration-group concern (Open Quest
 ### ADR-5 — `ParseIntent` owns the exception→value boundary; it takes the parsed arguments
 **Decision:** `IParseIntent.Parse(VerifyArgumentsResult arguments) → Task<IntentResult>` reads
 `arguments.IntentPath`, converts **exactly** `IOException` and `UnauthorizedAccessException` into
-`IntentFileUnreadable` and `JsonException` into `MalformedIntentJson`; a deserialized `null` is also
-`MalformedIntentJson`. Then it delegates to `IValidateIntent.Validate(contract, arguments.ProductionPath)`.
+`IntentFileUnreadable`, treats empty/whitespace content as `IntentFileUnreadable` (FatCat's
+`ReadAllText` returns `string.Empty` for a missing file instead of throwing — amended 2026-10-14
+after the first Phase 2 attempt; no `FileExists` re-check), and converts `JsonException` into
+`MalformedIntentJson`; a deserialized `null` is also `MalformedIntentJson`. Duplicate JSON
+properties are allowed (last wins — user decision 2026-10-14). Then it delegates to `IValidateIntent.Validate(contract, arguments.ProductionPath)`.
 `VerifyCommand` calls only `IParseIntent`. `JsonOptions` sets `PropertyNameCaseInsensitive = true` and
 `UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow`.
 **Context:** A malformed or unreadable intent file is a predictable outcome of AI-authored input, so

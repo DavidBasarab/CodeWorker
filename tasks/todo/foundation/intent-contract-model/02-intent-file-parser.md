@@ -80,16 +80,27 @@ public class ParseIntent(IFileSystemTools fileSystemTools, IValidateIntent valid
    `catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)`) →
    `IntentFileUnreadable`, message
    `$"Intent file could not be read: {arguments.IntentPath}. {exception.Message}"`.
-   (`FileNotFoundException`/`DirectoryNotFoundException` derive from `IOException` — covers a file
-   removed between item 1's existence check and this read.)
-2. Deserialize: `JsonSerializer.Deserialize<IntentContract>(json, JsonOptions)`. Catch **only**
+   This covers a locked file and a path that is a directory.
+2. **Empty or missing content (amended 2026-10-14 after the first Phase 2 attempt failed):**
+   FatCat's `IFileSystemTools.ReadAllText` does **not** throw for a missing file. It returns
+   `string.Empty` (`C:\Code\FatCat.Toolkit\src\ToolKit\FileSystemTools.cs`:
+   `FileDoesNotExist(path) ? string.Empty : ...`). So when
+   `string.IsNullOrWhiteSpace(json)` is true, return `IntentFileUnreadable` with message
+   `$"Intent file could not be read: {arguments.IntentPath}. The file is empty or missing."`.
+   This covers a file deleted after item 1's existence check, as well as a genuinely empty file.
+   **Do not** add a `fileSystemTools.FileExists` guard: item 1 already checks existence
+   (`IntentFileNotFound`), a second check would be racy and would give two error codes for one
+   condition, and code-review rejected it on the first attempt.
+3. Deserialize: `JsonSerializer.Deserialize<IntentContract>(json, JsonOptions)`. Catch **only**
    `JsonException` → `MalformedIntentJson`, message
    `$"Intent file is not a valid intent JSON object: {arguments.IntentPath}. {exception.Message}"`.
-   This covers syntax errors, an empty file, a non-object root (`[]`, `"text"`, `42`), and an
-   unknown property (rejected by `Disallow`).
-3. A `null` contract (the file is literally `null`) → `MalformedIntentJson`, message
+   This covers syntax errors, a non-object root (`[]`, `"text"`, `42`), and an unknown property
+   (rejected by `Disallow`). Keep `JsonOptions` exactly as designed above. **Do not** set
+   `AllowDuplicateProperties = false`: duplicate properties are allowed and the last one wins (user
+   decision 2026-10-14). Strict JSON stays, so comments and trailing commas are malformed (ADR-5).
+4. A `null` contract (the file is literally `null`) → `MalformedIntentJson`, message
    `$"Intent file is not a valid intent JSON object: {arguments.IntentPath}. The file contains no intent object."`.
-4. Otherwise → `return validateIntent.Validate(contract, arguments.ProductionPath);` (its result is
+5. Otherwise → `return validateIntent.Validate(contract, arguments.ProductionPath);` (its result is
    returned as-is).
 
 Failures built here set `IsValid = false`, the tag, the message, and `Intent = null` (nothing was
@@ -110,7 +121,9 @@ Constructor setup:
 - `validateIntent = A.Fake<IValidateIntent>()`; capture the contract it receives and return a sentinel:
   `A.CallTo(() => validateIntent.Validate(A<IntentContract>._, A<string>._)).ReturnsLazily((IntentContract intent, string _) => { capturedIntent = intent; return validatedResult; });`
   where `validatedResult = new IntentResult { IsValid = true, Error = IntentValidationError.None }`.
-- `arguments = new VerifyArgumentsResult { IsValid = true, IntentPath = "intent.json", ProductionPath = "TokenLimitHeuristic.cs", TestsPath = "TokenLimitHeuristicTests.cs" }`.
+- `arguments = new VerifyArgumentsResult { IsValid = true, IntentPath = Faker.Create<string>(), ProductionPath = Faker.Create<string>(), TestsPath = Faker.Create<string>() }`
+  (Phase 2 tests assert against `arguments.IntentPath` / `arguments.ProductionPath`, not literals).
+- Do not add `using System.IO;` — `ImplicitUsings` already imports it.
 - `parseIntent = new ParseIntent(fileSystemTools, validateIntent)`.
 
 Sample JSON (the README example — the round-trip fixture), as a `private const string`:
@@ -129,7 +142,7 @@ Sample JSON (the README example — the round-trip fixture), as a `private const
 
 Failing tests first (one assertion each):
 
-1. `ReadTheIntentFileFromTheIntentPath` — `ReadAllText("intent.json")` `MustHaveHappenedOnceExactly`.
+1. `ReadTheIntentFileFromTheIntentPath` — `ReadAllText(arguments.IntentPath)` `MustHaveHappenedOnceExactly`.
 2. `DeserializeTheWhy` — `capturedIntent.Why` equals the sample's why.
 3. `DeserializeTheClass` — `capturedIntent.Class` is `"TokenLimitHeuristic"`.
 4. `DeserializeTheResponsibility`.
@@ -138,14 +151,19 @@ Failing tests first (one assertion each):
 7. `DeserializeTheTestLink` — `Behaviors[0].Test` is `"ReturnTokenLimitedWhenMarkerPresent"`.
 8. `LeaveTheTestNullWhenOmitted` — `Behaviors[1].Test` is `null`.
 9. `MatchPropertyNamesCaseInsensitively` — JSON using `"Why"`, `"CLASS"`, … → `capturedIntent.Class` populated.
-10. `ValidateAgainstTheProductionPath` — `Validate(A<IntentContract>._, "TokenLimitHeuristic.cs")` `MustHaveHappenedOnceExactly`.
+10. `ValidateAgainstTheProductionPath` — `Validate(A<IntentContract>._, arguments.ProductionPath)` `MustHaveHappenedOnceExactly`.
 11. `ReturnTheValidationResult` — result `BeSameAs(validatedResult)`.
 12. `ReturnIntentFileUnreadableWhenReadThrowsIOException` — `ReadAllText` `.Throws(new IOException("locked"))` → `Error` tag.
 13. `ReturnIntentFileUnreadableWhenAccessIsDenied` — throws `UnauthorizedAccessException` → tag.
-14. `ReturnIntentFileUnreadableWhenTheFileHasGone` — throws `FileNotFoundException` → tag.
-15. `NameTheIntentPathWhenUnreadable` — message contains `"intent.json"`.
+14. `ReturnIntentFileUnreadableWhenTheFileIsEmptyOrMissing` — `currentJson = ""` (what the real
+    toolkit returns for a missing file) → `IntentFileUnreadable`. Do **not** fake a
+    `FileNotFoundException`, because the toolkit never throws one.
+15. `NameTheIntentPathWhenUnreadable` — message contains the intent path.
 16. `ReturnMalformedIntentJsonForInvalidSyntax` — `currentJson = "{ not json"` → tag.
-17. `ReturnMalformedIntentJsonForAnEmptyFile` — `""` → tag.
+17. `ReturnIntentFileUnreadableForWhitespaceContent` — `"   \n"` → `IntentFileUnreadable`.
+17a. `NotValidateWhenTheFileIsEmptyOrMissing` — `""` → `Validate` `MustNotHaveHappened`.
+17b. `NotCheckFileExistence` — `fileSystemTools.FileExists(A<string>._)` `MustNotHaveHappened`
+    (item 1 owns existence).
 18. `ReturnMalformedIntentJsonForANullPayload` — `"null"` → tag.
 19. `ReturnMalformedIntentJsonForAnArrayPayload` — `"[]"` → tag.
 20. `ReturnMalformedIntentJsonForAnUnknownProperty` — sample with `"tests"` instead of `"test"` → tag.
