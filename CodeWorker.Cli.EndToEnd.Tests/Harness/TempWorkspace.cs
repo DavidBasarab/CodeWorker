@@ -7,6 +7,15 @@ namespace Testing.FatCat.CodeWorker.Cli.EndToEnd.Harness;
 )]
 public class TempWorkspace : IDisposable
 {
+	private const string ValidIntent = """
+		{
+		  "why": "End-to-end fixture for the verify command.",
+		  "class": "Foo",
+		  "responsibility": "Exist so verify has a production class to check.",
+		  "behaviors": [ { "behavior": "Returns nothing when constructed", "test": "ReturnNothingWhenConstructed" } ]
+		}
+		""";
+
 	private readonly string root;
 
 	public TempWorkspace()
@@ -15,7 +24,7 @@ public class TempWorkspace : IDisposable
 
 		Directory.CreateDirectory(root);
 
-		IntentPath = WriteFile("intent.json", "{ \"class\": \"Foo\" }");
+		IntentPath = WriteFile("intent.json", ValidIntent);
 		ProductionPath = WriteFile("Foo.cs", "public class Foo { }");
 		TestsPath = WriteFile("FooTests.cs", "public class FooTests { }");
 	}
@@ -25,6 +34,11 @@ public class TempWorkspace : IDisposable
 	public string ProductionPath { get; }
 
 	public string TestsPath { get; }
+
+	public void WriteIntent(string content)
+	{
+		WriteFile("intent.json", content);
+	}
 
 	public void Dispose()
 	{

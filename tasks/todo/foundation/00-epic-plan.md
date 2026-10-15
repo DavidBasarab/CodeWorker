@@ -66,7 +66,10 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** a valid intent JSON produces a populated intent-context object with all
   behaviors; each invalid payload class returns a distinct validation error value naming what is
   wrong; round-trips are unit-tested against sample intent JSON.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/foundation/intent-contract-model/ -->
+- **Plan:** [`tasks/todo/foundation/intent-contract-model/`](intent-contract-model/00-overview.md)
+  — planned 2026-10-14 (task.md + 00-overview + 3 phases + orchestrator). User decisions: observable
+  phrasing enforced by a leading-verb allow-list; the intent `class` must match the production file
+  name.
 
 ### 3. Gate pipeline framework — `gate-pipeline-framework`
 - **Scope:** The `IVerificationGate` abstraction and the **fail-fast runner** (README "How It
@@ -188,10 +191,11 @@ edited freely.
 
 ## Next item
 
-**`intent-contract-model`** (item 2) — say **"plan intent contract model"** (or "plan the next
-foundation item") to expand it. Item 1 (`verify-command-surface`) is **planned** (see its folder)
-and ready to build via **"run verify-command-surface"**; build it before planning item 2 so any
-command-surface shape change can be reconciled first (the one-at-a-time rule).
+**`gate-pipeline-framework`** (item 3) — say **"plan gate pipeline framework"** (or "plan the next
+foundation item") to expand it. Item 1 (`verify-command-surface`) is built and merged. Item 2
+(`intent-contract-model`) is **planned** (see its folder) and ready to build via
+**"run intent-contract-model"**; build it before planning item 3 so any intent-model shape change
+can be reconciled first (the one-at-a-time rule).
 
 ## Assumptions & open questions
 
@@ -204,9 +208,9 @@ command-surface shape change can be reconciled first (the one-at-a-time rule).
   in-process Roslyn C# engine is the separate `Engine` group. A placeholder/no-op engine likely
   backs the seam until then — confirm that's acceptable, or fold the first real engine registration
   into the `Engine` group and have item 5 register nothing concrete.
-- **Intent schema field names.** Treated as `{ why, class, responsibility, behaviors[] of
-  { behavior, test? } }` per the resolved Open Question; exact names are finalized *in* item 2
-  (`epics.md` note). Item 1 only needs the file *path*, so it is unaffected by the final names.
+- **[Resolved 2026-10-14] Intent schema field names.** Pinned by item 2's plan as
+  `{ why, class, responsibility, behaviors[] of { behavior, test? } }`, unknown properties rejected
+  (see `intent-contract-model/00-overview.md` ADR-1/ADR-5).
 - **Verdict JSON shape** (the `Stop`-hook contract) is defined in item 4; the hook-wiring epic
   (Integration group) consumes it later. Item 4 owns the field names; pin them there.
 - **Sub-10s budget does not bite in Foundation.** The spine has no Roslyn/LLM work; the budget

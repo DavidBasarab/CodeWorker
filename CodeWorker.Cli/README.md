@@ -149,7 +149,11 @@ them to build, test, and judge intent) and **derives the diff itself** from git 
 to scope the mutation gate to the *changed lines* — the biggest speed lever, at zero extra authoring
 cost. A brand-new class diffs as fully new, so nothing is ever under-tested.
 
-> Schema is close to final; exact field names are settled in Epic **Intent contract model**.
+> The field names above are final; unknown fields are rejected. `test` is optional — omit it rather
+> than leaving it empty. `class` must match the production file name (`TokenLimitHeuristic` ↔
+> `TokenLimitHeuristic.cs`). Each behavior must start with an observable outcome verb in its listed
+> form (e.g. Returns, Throws, Calls, Logs); after a "Does not" or "Never" prefix the verb may also be
+> in its base form ("Does not call…", "Never returns…").
 
 ---
 
