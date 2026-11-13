@@ -136,8 +136,8 @@ public class CodeWorkerModule : Module
 - Use it only for that root resolution, or for genuine runtime resolution when a type truly must be chosen at run time.
 - Do NOT use `SystemScope` / `ISystemScope` as a service locator to dodge constructor injection. If a class always needs the same dependency, inject it — as `CommandResolver` injects every command it can dispatch to.
 
-## C# 14 / net10 Features
-- The target framework is `net10.0` with the default language version.
+## C# 15 / net11 Features
+- The target framework is `net11.0` with the default language version.
 - The `field` keyword is accepted in property getters for backing-field initialization (`field ??= ...`) and in computed properties that need to cache.
 - Extension blocks (`extension(TargetType target) { ... }`) are accepted for grouping multiple extension methods on the same type.
 - Use these features where they read more clearly — not gratuitously.

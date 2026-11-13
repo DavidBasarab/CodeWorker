@@ -24,12 +24,12 @@ Current state you will find (verified against the code):
 
 - Four projects in `CodeWorker.slnx` (legacy format): `CodeWorker`, `CodeWorker.Tests`,
   `CodeWorker.Cli`, `CodeWorker.Cli.Tests`. You add a **fifth**: `CodeWorker.Cli.EndToEnd.Tests`.
-- `CodeWorker.Cli.csproj` → `OutputType=Exe`, `net10.0`, `AssemblyName=FatCatCodeWorkerCli`. Publishing
+- `CodeWorker.Cli.csproj` → `OutputType=Exe`, `net11.0`, `AssemblyName=FatCatCodeWorkerCli`. Publishing
   it yields **`FatCatCodeWorkerCli.exe`** on Windows.
 - `CodeWorkerCliApplication.Run` logs `"Welcome to Code Worker CLI"` (Information) on **every**
   invocation, via the synchronous Serilog console sink registered in `CodeWorkerCliModule`. That banner
   is the smoke test's assertion target — it proves the real exe booted and logged to stdout.
-- `CodeWorker.Cli.Tests.csproj` is the template for packages/props: `net10.0`, `ImplicitUsings=enable`,
+- `CodeWorker.Cli.Tests.csproj` is the template for packages/props: `net11.0`, `ImplicitUsings=enable`,
   `Nullable=disable`, `OutputType=Library`, `NoWarn=$(NoWarn);NETSDK1206`, and package refs
   `Microsoft.NET.Test.Sdk` 18.3.0, `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.5, `FluentAssertions`,
   `FatCat.Fakes`, `CSharpier.MsBuild` 1.2.6. **Drop FakeItEasy** (nothing is faked in a black-box test);
@@ -48,7 +48,7 @@ Mirror `CodeWorker.Cli.Tests.csproj`, with `RootNamespace`/`AssemblyName`
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>disable</Nullable>
 		<RootNamespace>Testing.FatCat.CodeWorker.Cli.EndToEnd</RootNamespace>

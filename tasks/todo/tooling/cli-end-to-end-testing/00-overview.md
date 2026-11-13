@@ -37,7 +37,7 @@ it as a subprocess**, asserting on the **stdout** and **exit code** a real calle
     `verify --intent …` and bare `--intent …` parse identically.
 - **`CodeWorkerCliModule`** registers a plain synchronous Serilog console logger
   (`WriteTo.Console()`); everything else auto-registers via `SystemScope` scanning.
-- **The CLI project** (`CodeWorker.Cli.csproj`) is `OutputType=Exe`, `net10.0`,
+- **The CLI project** (`CodeWorker.Cli.csproj`) is `OutputType=Exe`, `net11.0`,
   `AssemblyName=FatCatCodeWorkerCli` → published host is **`FatCatCodeWorkerCli.exe`** on Windows.
 - **The test stack** (`CodeWorker.Cli.Tests`): xUnit 2.9.3, FakeItEasy, FluentAssertions, FatCat.Fakes,
   `Microsoft.NET.Test.Sdk` 18.3.0, `xunit.runner.visualstudio` 3.1.5, CSharpier.MsBuild. The new E2E

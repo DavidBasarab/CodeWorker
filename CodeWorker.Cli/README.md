@@ -230,7 +230,7 @@ known directory. You control the gate without editing code:
 ## Where This Fits
 
 The CodeWorker CLI lives in `CodeWorker.Cli`, alongside — but separate from — the CodeWorker overnight
-task-runner. It is built on the same stack: **.NET 10 / C#** on the **FatCat** toolkit, Autofac DI via
+task-runner. It is built on the same stack: **.NET 11 / C# 15** on the **FatCat** toolkit, Autofac DI via
 `SystemScope`, Serilog logging, and the command pattern (`args[0]` selects an `ICommand`) — so `verify`
 is the first of what will be several commands. It follows every rule in [`../CLAUDE.md`](../CLAUDE.md)
 and `.claude/rules` — the tool that enforces the standards is itself held to them.

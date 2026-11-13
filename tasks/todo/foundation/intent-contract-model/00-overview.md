@@ -178,7 +178,7 @@ with text matching that the Roslyn engine will supersede).
   `System.Text.Json.Serialization`, `System.Text.RegularExpressions`, and `FatCat.Toolkit` need
   explicit `using`s.
 - **`JsonUnmappedMemberHandling.Disallow`** exists on `JsonSerializerOptions.UnmappedMemberHandling`
-  in .NET 8+ (net10.0 target) and throws `JsonException` on an unknown property.
+  in .NET 8+ (net11.0 target) and throws `JsonException` on an unknown property.
 - **`Faker.Create<string[]>()`** etc. are available as in item 1's tests; tests whose assertions read
   specific fields pin those fields explicitly.
 - **The task branch is the current branch `intent-contract-model`** (not `main`) — do not create a

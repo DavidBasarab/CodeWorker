@@ -17,7 +17,7 @@ complete instruction set. This runbook **drives** the phases; it never writes th
 - Never push to any remote; never amend, squash, rebase, or force-push — human review gates the push.
 - Work happens on the **current branch** (expected: `CliTester`). If the current branch is `main`,
   stop and ask the user first.
-- **Preconditions:** a restored solution and the .NET 10 SDK on PATH (the publish fixture shells out to
+- **Preconditions:** a restored solution and the .NET 11 SDK on PATH (the publish fixture shells out to
   `dotnet publish`). No MongoDB, no network, no external services — the whole item is local test code.
 
 ## Phases (dependency order)
