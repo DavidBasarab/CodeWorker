@@ -19,7 +19,7 @@
 ## Test Stack
 - Framework: xUnit
 - Faking: FakeItEasy (`A.Fake<T>()`, `A.CallTo()`)
-- Assertions: FluentAssertions (`.Should()`, `.Be()`, `.BeEquivalentTo()`, etc.)
+- Assertions: FatCat.Testing (`.Should()`, `.Be()`, `.BeEquivalentTo()`, etc.) — negation is the `Not` property: `.Should().Not.BeNull()`
 - Thread substitute: `FakeThread` (from `FatCat.Toolkit.Threading` — runs `IThread` operations synchronously in tests)
 - Test data: `Faker.Create<T>()` (from `FatCat.Fakes`) for generating test objects — do not hard-code values
 
@@ -71,7 +71,7 @@ global using System.Threading.Tasks;
 global using FakeItEasy;
 global using FatCat.CodeWorker;
 global using FatCat.Fakes;
-global using FluentAssertions;
+global using FatCat.Testing;
 global using Xunit;
 ```
 

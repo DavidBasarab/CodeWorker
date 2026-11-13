@@ -84,7 +84,7 @@ Grounded in `CodeWorker.Cli/README.md` and the current code:
 - **The surface under test** was built by
   [`tasks/done/foundation/verify-command-surface/`](../../../done/foundation/verify-command-surface/00-overview.md)
   — see its ADR-5 (exit code deferred) and ADR-2 (unknown verb routes to verify).
-- **Standards:** every phase obeys `CLAUDE.md` and `.claude/rules/csharp/*.md` (xUnit + FluentAssertions,
+- **Standards:** every phase obeys `CLAUDE.md` and `.claude/rules/csharp/*.md` (xUnit + FatCat.Testing,
   verb-first one-assertion tests, block bodies, `[ExcludeFromCodeCoverage]` for `System.Diagnostics.Process`
   wrappers per `testing.md`).
 

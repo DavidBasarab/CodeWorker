@@ -43,7 +43,10 @@ public class LogClaudeEnvironmentTests
 	{
 		await logClaudeEnvironment.Log();
 
-		capturedSettings.Should().Contain(settings => settings.FileName == "claude" && settings.Arguments == "--version");
+		capturedSettings
+			.Where(settings => settings.FileName == "claude" && settings.Arguments == "--version")
+			.Should()
+			.Not.BeEmpty();
 	}
 
 	[Fact]
@@ -51,7 +54,7 @@ public class LogClaudeEnvironmentTests
 	{
 		await logClaudeEnvironment.Log();
 
-		capturedSettings.Should().NotContain(settings => settings.Arguments == "doctor");
+		capturedSettings.Where(settings => settings.Arguments == "doctor").Should().BeEmpty();
 	}
 
 	[Fact]

@@ -39,7 +39,7 @@ it as a subprocess**, asserting on the **stdout** and **exit code** a real calle
   (`WriteTo.Console()`); everything else auto-registers via `SystemScope` scanning.
 - **The CLI project** (`CodeWorker.Cli.csproj`) is `OutputType=Exe`, `net11.0`,
   `AssemblyName=FatCatCodeWorkerCli` → published host is **`FatCatCodeWorkerCli.exe`** on Windows.
-- **The test stack** (`CodeWorker.Cli.Tests`): xUnit 2.9.3, FakeItEasy, FluentAssertions, FatCat.Fakes,
+- **The test stack** (`CodeWorker.Cli.Tests`): xUnit 2.9.3, FakeItEasy, FatCat.Testing, FatCat.Fakes,
   `Microsoft.NET.Test.Sdk` 18.3.0, `xunit.runner.visualstudio` 3.1.5, CSharpier.MsBuild. The new E2E
   project mirrors these (minus FakeItEasy — nothing is faked in a black-box test).
 - **The solution** is legacy `.sln` format with four projects; the new project is added the same way
@@ -144,7 +144,7 @@ abstraction for a one-file wrapper; over-engineering per `naming-and-structure.m
 - **The Serilog console sink is synchronous**, so stdout is complete at process exit (verified in
   `CodeWorkerCliModule`). No flush/delay handling is needed unless the sink becomes async later.
 - **Nullable is disabled** and **`ImplicitUsings` is enabled** in the CLI projects; the E2E project
-  follows suit. A `GlobalUsings.cs` covers the test stack (xUnit, FluentAssertions), mirroring
+  follows suit. A `GlobalUsings.cs` covers the test stack (xUnit, FatCat.Testing), mirroring
   `CodeWorker.Cli.Tests`.
 - **Work happens on the current branch `CliTester`** (not `main`), per the commit policy.
 - **CSharpier uses tabs** (`.csharpierrc`) — write readable code and let it format on build.

@@ -50,7 +50,7 @@ public class ValidateRepositoryTests
 
 		var result = validateRepository.Validate(repositorySettings);
 
-		result.Errors.Should().Contain(error => error.Contains(@"C:\Projects\my-api"));
+		result.Errors.Where(error => error.Contains(@"C:\Projects\my-api")).Should().Not.BeEmpty();
 	}
 
 	[Fact]

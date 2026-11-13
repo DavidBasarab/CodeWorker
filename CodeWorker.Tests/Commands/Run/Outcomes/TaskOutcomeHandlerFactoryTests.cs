@@ -48,7 +48,7 @@ public class TaskOutcomeHandlerFactoryTests
 	[Fact]
 	public void ThrowForUnknownOutcome()
 	{
-		var act = () => factory.For((TaskOutcome)999);
+		Action act = () => factory.For((TaskOutcome)999);
 
 		act.Should().Throw<ArgumentOutOfRangeException>();
 	}

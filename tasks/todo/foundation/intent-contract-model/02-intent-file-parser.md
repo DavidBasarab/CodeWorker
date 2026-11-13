@@ -171,7 +171,7 @@ Failing tests first (one assertion each):
 22. `NotValidateWhenTheFileIsUnreadable` — IOException → `Validate` `MustNotHaveHappened`.
 23. `ReturnInvalidWhenTheJsonIsMalformed` — `IsValid` false.
 24. `LetUnexpectedExceptionsPropagate` — `ReadAllText` throws `InvalidOperationException` →
-    `FluentActions.Awaiting(() => parseIntent.Parse(arguments)).Should().ThrowAsync<InvalidOperationException>()`
+    `Func<Task> act = () => parseIntent.Parse(arguments);` then `act.Should().ThrowAsync<InvalidOperationException>()`
     (proves the catch set is narrow — no swallowing).
 
 Implement `ParseIntent` to green. No smoke check — not wired until Phase 3.

@@ -377,10 +377,12 @@ public class ParseIntentTests
 	}
 
 	[Fact]
-	public async Task LetUnexpectedExceptionsPropagate()
+	public void LetUnexpectedExceptionsPropagate()
 	{
 		A.CallTo(() => fileSystemTools.ReadAllText(A<string>._)).Throws(new InvalidOperationException("unexpected"));
 
-		await FluentActions.Awaiting(() => parseIntent.Parse(arguments)).Should().ThrowAsync<InvalidOperationException>();
+		Func<Task> act = () => parseIntent.Parse(arguments);
+
+		act.Should().ThrowAsync<InvalidOperationException>();
 	}
 }

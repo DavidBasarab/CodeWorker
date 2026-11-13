@@ -40,7 +40,7 @@ single, tagged **`IntentValidationError`** with a human-readable message. Every 
   file as `{ "class": "Foo" }` — **invalid under this item's rules** (no `why`, no behaviors). Phase 3
   must make the workspace write a valid intent, or the green-path E2E would start logging an intent
   error. Existing E2E assertions (`"verify: parsed intent"`, usage errors, exit 0) must stay green.
-- **Test stack** (`CodeWorker.Cli.Tests/GlobalUsings.cs`): xUnit, FakeItEasy, FluentAssertions,
+- **Test stack** (`CodeWorker.Cli.Tests/GlobalUsings.cs`): xUnit, FakeItEasy, FatCat.Testing,
   `FatCat.Fakes`. Tests mirror source folders with the `Testing.` prefix.
 
 ## Acceptance Criteria → Phase Map

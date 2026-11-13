@@ -56,7 +56,7 @@ public class RecordRepositoryRunHistoryTests
 		await recordRepositoryRunHistory.Record(repositoryPath, entry);
 
 		capturedContent.Should().EndWith("\n");
-		capturedContent.Trim().Should().NotContain("\n");
+		capturedContent.Trim().Should().Not.Contain("\n");
 	}
 
 	[Fact]

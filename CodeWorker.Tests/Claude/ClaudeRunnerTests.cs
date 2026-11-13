@@ -198,7 +198,7 @@ public class ClaudeRunnerTests
 
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--model");
+		capturedLaunchSettings.ClaudeArgs.Should().Not.Contain("--model");
 	}
 
 	[Fact]
@@ -219,7 +219,7 @@ public class ClaudeRunnerTests
 
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--max-turns");
+		capturedLaunchSettings.ClaudeArgs.Should().Not.Contain("--max-turns");
 	}
 
 	[Fact]
@@ -239,7 +239,7 @@ public class ClaudeRunnerTests
 
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--dangerously-skip-permissions");
+		capturedLaunchSettings.ClaudeArgs.Should().Not.Contain("--dangerously-skip-permissions");
 	}
 
 	[Fact]
@@ -268,7 +268,7 @@ public class ClaudeRunnerTests
 	{
 		await claudeRunner.Run(markdownFilePath, claudeSettings, referenceFiles);
 
-		capturedLaunchSettings.ClaudeArgs.Should().NotContain("--append-system-prompt");
+		capturedLaunchSettings.ClaudeArgs.Should().Not.Contain("--append-system-prompt");
 	}
 
 	[Fact]

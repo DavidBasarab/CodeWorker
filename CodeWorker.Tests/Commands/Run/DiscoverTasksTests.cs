@@ -69,9 +69,8 @@ public class DiscoverTasksTests
 
 		result
 			.Should()
-			.BeEquivalentTo(
-				new[] { @"C:\tasks\todo\03_SecondTask.md", @"C:\tasks\todo\11_ThirdTask.md", @"C:\tasks\todo\14_ThisTask.md" },
-				options => options.WithStrictOrdering()
+			.Equal(
+				new[] { @"C:\tasks\todo\03_SecondTask.md", @"C:\tasks\todo\11_ThirdTask.md", @"C:\tasks\todo\14_ThisTask.md" }
 			);
 	}
 
@@ -95,12 +94,7 @@ public class DiscoverTasksTests
 
 		var result = discoverTasks.Discover(@"C:\tasks\todo");
 
-		result
-			.Should()
-			.BeEquivalentTo(
-				new[] { @"C:\tasks\todo\Apple.md", @"C:\tasks\todo\Mango.md", @"C:\tasks\todo\Zebra.md" },
-				options => options.WithStrictOrdering()
-			);
+		result.Should().Equal(new[] { @"C:\tasks\todo\Apple.md", @"C:\tasks\todo\Mango.md", @"C:\tasks\todo\Zebra.md" });
 	}
 
 	[Fact]
@@ -122,15 +116,14 @@ public class DiscoverTasksTests
 
 		result
 			.Should()
-			.BeEquivalentTo(
+			.Equal(
 				new[]
 				{
 					@"C:\tasks\todo\01_Second.md",
 					@"C:\tasks\todo\05_First.md",
 					@"C:\tasks\todo\Apple.md",
 					@"C:\tasks\todo\Zebra.md",
-				},
-				options => options.WithStrictOrdering()
+				}
 			);
 	}
 }

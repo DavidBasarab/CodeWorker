@@ -66,7 +66,7 @@ public class BuildReferenceSystemPromptTests
 		var result = buildReferenceSystemPrompt.Build(referenceFiles);
 
 		result.Should().Contain("value is \\\"quoted\\\"");
-		result.Should().NotContain("value is \"quoted\"");
+		result.Should().Not.Contain("value is \"quoted\"");
 	}
 
 	[Fact]

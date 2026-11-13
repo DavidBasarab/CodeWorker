@@ -12,7 +12,7 @@
 ## Context (complete handoff — read before coding)
 
 Read `CodeWorker.Cli/README.md`, `CLAUDE.md`, and **all** `.claude/rules/csharp/*.md` first —
-mandatory. Pay special attention to `testing.md` (xUnit, FluentAssertions, verb-first one-assertion
+mandatory. Pay special attention to `testing.md` (xUnit, FatCat.Testing, verb-first one-assertion
 tests, block bodies, the `[ExcludeFromCodeCoverage]` low-level-wrapper exemption) and
 `naming-and-structure.md` (interface names describe a capability; one class per file; no over-engineering).
 
@@ -31,7 +31,7 @@ Current state you will find (verified against the code):
   is the smoke test's assertion target — it proves the real exe booted and logged to stdout.
 - `CodeWorker.Cli.Tests.csproj` is the template for packages/props: `net11.0`, `ImplicitUsings=enable`,
   `Nullable=disable`, `OutputType=Library`, `NoWarn=$(NoWarn);NETSDK1206`, and package refs
-  `Microsoft.NET.Test.Sdk` 18.3.0, `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.5, `FluentAssertions`,
+  `Microsoft.NET.Test.Sdk` 18.3.0, `xunit` 2.9.3, `xunit.runner.visualstudio` 3.1.5, `FatCat.Testing`,
   `FatCat.Fakes`, `CSharpier.MsBuild` 1.2.6. **Drop FakeItEasy** (nothing is faked in a black-box test);
   **do not** add a `ProjectReference` to the CLI (ADR-2 — black box).
 
@@ -60,7 +60,7 @@ Mirror `CodeWorker.Cli.Tests.csproj`, with `RootNamespace`/`AssemblyName`
 		<NoWarn>$(NoWarn);NETSDK1206</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="FluentAssertions" Version="*" />
+		<PackageReference Include="FatCat.Testing" Version="*" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
 		<PackageReference Include="xunit" Version="2.9.3" />
 		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
@@ -87,7 +87,7 @@ existing project's rows exactly). Generate a GUID with
 
 ```csharp
 global using System.Threading.Tasks;
-global using FluentAssertions;
+global using FatCat.Testing;
 global using Xunit;
 ```
 

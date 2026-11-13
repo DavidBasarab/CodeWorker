@@ -1607,7 +1607,7 @@ public static $string$ $Name$
   <s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CBBB1F8B2E1AA544AB068226D27DCF8A/Scope/=E8F0594528C33E45BBFEC6CFE851095D/@KeyIndexDefined">True</s:Boolean>
   <s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CBBB1F8B2E1AA544AB068226D27DCF8A/Scope/=E8F0594528C33E45BBFEC6CFE851095D/Type/@EntryValue">InCSharpProjectFile</s:String>
   <s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CBBB1F8B2E1AA544AB068226D27DCF8A/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
-  <s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CBBB1F8B2E1AA544AB068226D27DCF8A/Text/@EntryValue">using FluentAssertions;
+  <s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=CBBB1F8B2E1AA544AB068226D27DCF8A/Text/@EntryValue">using FatCat.Testing;
 using NUnit.Framework;
 
 namespace $test_namespace$
@@ -2109,7 +2109,7 @@ public void $Test_Name$()
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=834ABD83A91A0F4E9756349B56C2EA42/Scope/=E8F0594528C33E45BBFEC6CFE851095D/@KeyIndexDefined">True</s:Boolean>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=834ABD83A91A0F4E9756349B56C2EA42/Scope/=E8F0594528C33E45BBFEC6CFE851095D/Type/@EntryValue">InCSharpProjectFile</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=834ABD83A91A0F4E9756349B56C2EA42/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
-	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=834ABD83A91A0F4E9756349B56C2EA42/Text/@EntryValue">using FluentAssertions;
+	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=834ABD83A91A0F4E9756349B56C2EA42/Text/@EntryValue">using FatCat.Testing;
 using FakeItEasy;
 using Xunit;
 

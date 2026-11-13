@@ -7,48 +7,48 @@ public class RequiredTaskFoldersTests
 	[Fact]
 	public void ContainTodo()
 	{
-		RequiredTaskFolders.All.Should().Contain("todo");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("todo");
 	}
 
 	[Fact]
 	public void ContainPending()
 	{
-		RequiredTaskFolders.All.Should().Contain("pending");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("pending");
 	}
 
 	[Fact]
 	public void ContainDone()
 	{
-		RequiredTaskFolders.All.Should().Contain("done");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("done");
 	}
 
 	[Fact]
 	public void ContainBlocked()
 	{
-		RequiredTaskFolders.All.Should().Contain("blocked");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("blocked");
 	}
 
 	[Fact]
 	public void ContainFailed()
 	{
-		RequiredTaskFolders.All.Should().Contain("failed");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("failed");
 	}
 
 	[Fact]
 	public void ContainReference()
 	{
-		RequiredTaskFolders.All.Should().Contain("reference");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("reference");
 	}
 
 	[Fact]
 	public void ContainLogs()
 	{
-		RequiredTaskFolders.All.Should().Contain("logs");
+		RequiredTaskFolders.All.AsEnumerable().Should().Contain("logs");
 	}
 
 	[Fact]
 	public void ContainExactlySevenFolders()
 	{
-		RequiredTaskFolders.All.Should().HaveCount(7);
+		RequiredTaskFolders.All.AsEnumerable().Should().HaveCount(7);
 	}
 }
