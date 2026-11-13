@@ -149,7 +149,7 @@ Use parallel subagents whenever the dependency graph allows it. The orchestrator
 - **Single-phase wave.** Run it exactly as before: one fresh subagent, working directly on the task branch.
 - **Multi-phase wave.** Record `git rev-parse HEAD` as the wave base, then launch **one fresh subagent per phase in a single message** (so they run concurrently), each with `isolation: "worktree"` so it builds, tests, reviews, and commits in its own git worktree without colliding with its siblings. Each subagent makes exactly one commit on its worktree branch.
 - **Verify each worktree** once all subagents in the wave finish: the branch is exactly one commit ahead of the wave base (`git rev-list --count <base>..<branch>` is `1`), its working tree is clean, the commit message references the phase file, and the subagent did not report PHASE FAILED.
-- **Integrate onto the task branch** by `git cherry-pick`-ing each verified phase commit in **phase-number order** (one commit per phase is preserved — this is not a squash, amend, or rebase). Then run `dotnet build CodeWorker.sln` (zero warnings) and `dotnet test CodeWorker.sln` on the integrated branch; the phases were only proven individually, so the combination must be proven too. A cherry-pick conflict or a red build/test halts the pipeline.
+- **Integrate onto the task branch** by `git cherry-pick`-ing each verified phase commit in **phase-number order** (one commit per phase is preserved — this is not a squash, amend, or rebase). Then run `dotnet build CodeWorker.slnx` (zero warnings) and `dotnet test CodeWorker.slnx` on the integrated branch; the phases were only proven individually, so the combination must be proven too. A cherry-pick conflict or a red build/test halts the pipeline.
 - **Clean up** the wave's worktrees and their branches (`git worktree remove <path>`, `git branch -D <branch>`) only after their commits are on the task branch.
 - **Failure inside a wave.** Integrate the phases that succeeded (they are independent), write the failure report for the ones that failed, and halt before the next wave. Never start a wave whose dependencies include a failed phase.
 - The orchestrator still never writes production code itself — parallelism changes how many subagents run at once, not who does the work.
@@ -188,9 +188,9 @@ style. Name every file and its namespace. Note deviations to verify against the 
 ## Definition of Done (all mandatory)
 
 - [ ] Tests written before implementation (red observed before green)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln` — all tests pass
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; build again so CSharpier applies
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx` — all tests pass
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; build again so CSharpier applies
 - [ ] Namespaces match folder paths; one class per file; correct type-role suffixes; no banned patterns
 - [ ] Review loop until all three pass clean, restarting from the top after any fix: `unit-test-review` (must end `Unit test review: PASS`) → `code-review` → `code-security-review`
 - [ ] Exactly one commit on the current task branch (or on the isolated worktree branch when the orchestrator runs this phase in a parallel wave), message referencing this file; no push

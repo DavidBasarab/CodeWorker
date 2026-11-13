@@ -35,7 +35,7 @@ single, tagged **`IntentValidationError`** with a human-readable message. Every 
   The main project uses `System.Text.Json` directly (not the toolkit's `IJsonOperations`). Match it.
 - **`CodeWorkerCliModule`** registers only the Serilog `ILogger`; no module change is needed (every
   new interface has one implementation — ADR-G5).
-- **E2E suite** (`CodeWorker.Cli.EndToEnd.Tests`, in `CodeWorker.sln`, runs under `dotnet test`)
+- **E2E suite** (`CodeWorker.Cli.EndToEnd.Tests`, in `CodeWorker.slnx`, runs under `dotnet test`)
   publishes the CLI and drives it as a process. `Harness/TempWorkspace.cs` currently writes the intent
   file as `{ "class": "Foo" }` — **invalid under this item's rules** (no `why`, no behaviors). Phase 3
   must make the workspace write a valid intent, or the green-path E2E would start logging an intent

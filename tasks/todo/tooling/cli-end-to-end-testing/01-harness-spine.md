@@ -22,7 +22,7 @@ real verify assertions on top of it.
 
 Current state you will find (verified against the code):
 
-- Four projects in `CodeWorker.sln` (legacy format): `CodeWorker`, `CodeWorker.Tests`,
+- Four projects in `CodeWorker.slnx` (legacy format): `CodeWorker`, `CodeWorker.Tests`,
   `CodeWorker.Cli`, `CodeWorker.Cli.Tests`. You add a **fifth**: `CodeWorker.Cli.EndToEnd.Tests`.
 - `CodeWorker.Cli.csproj` → `OutputType=Exe`, `net10.0`, `AssemblyName=FatCatCodeWorkerCli`. Publishing
   it yields **`FatCatCodeWorkerCli.exe`** on Windows.
@@ -75,13 +75,13 @@ Mirror `CodeWorker.Cli.Tests.csproj`, with `RootNamespace`/`AssemblyName`
 </Project>
 ```
 
-### Add the project to `CodeWorker.sln`
+### Add the project to `CodeWorker.slnx`
 
 Add a `Project(...)` block with a **fresh, unique GUID** and the four config rows the other projects
 have (`Debug|Any CPU`, `Release|Any CPU`, and the `x64`/`x86` → `Any CPU` maps — copy the shape of an
 existing project's rows exactly). Generate a GUID with
 `pwsh -Command '. $PROFILE; [guid]::NewGuid().ToString().ToUpper()'`. Verify with
-`dotnet sln CodeWorker.sln list` and a solution build.
+`dotnet sln CodeWorker.slnx list` and a solution build.
 
 ### `CodeWorker.Cli.EndToEnd.Tests/GlobalUsings.cs`
 
@@ -218,7 +218,7 @@ public class PublishedCli : IAsyncLifetime
 
 		while (directory != null)
 		{
-			if (File.Exists(Path.Combine(directory.FullName, "CodeWorker.sln")))
+			if (File.Exists(Path.Combine(directory.FullName, "CodeWorker.slnx")))
 			{
 				return directory.FullName;
 			}
@@ -226,7 +226,7 @@ public class PublishedCli : IAsyncLifetime
 			directory = directory.Parent;
 		}
 
-		throw new DirectoryNotFoundException("Could not locate CodeWorker.sln above the test output directory.");
+		throw new DirectoryNotFoundException("Could not locate CodeWorker.slnx above the test output directory.");
 	}
 
 	private static async Task Publish(string projectPath, string outputDirectory)
@@ -315,12 +315,12 @@ public class VerifyBannerTests(PublishedCli publishedCli)
 
 ## Steps (TDD — tests first, red before green)
 
-1. Create the project, add it to `CodeWorker.sln`, add `GlobalUsings.cs`. Write `VerifyBannerTests`
+1. Create the project, add it to `CodeWorker.slnx`, add `GlobalUsings.cs`. Write `VerifyBannerTests`
    **first** — it will not compile / will fail because the harness types don't exist yet (red).
 2. Add `CliResult`, `CliProcessRunner`, `PublishedCli`, `EndToEndCollection` to make it green.
-3. Run **only** the E2E suite: `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` — both smoke
+3. Run **only** the E2E suite: `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` — both smoke
    tests pass (publish succeeds, banner appears, exit 0).
-4. Confirm the fast loop **excludes** them: `dotnet test CodeWorker.sln --filter "Category!=EndToEnd"`
+4. Confirm the fast loop **excludes** them: `dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"`
    runs the existing unit suites and does **not** trigger a publish.
 5. Manually eyeball a publish once if useful:
    `dotnet publish CodeWorker.Cli/CodeWorker.Cli.csproj -c Release -o <temp>` then run
@@ -329,10 +329,10 @@ public class VerifyBannerTests(PublishedCli publishedCli)
 ## Definition of Done (all mandatory)
 
 - [ ] Smoke tests written before the harness (red observed before green)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` — E2E tests pass
-- [ ] `dotnet test CodeWorker.sln --filter "Category!=EndToEnd"` — existing unit suites pass, no publish triggered
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; then
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` — E2E tests pass
+- [ ] `dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"` — existing unit suites pass, no publish triggered
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; then
       `dotnet build` again so CSharpier applies
 - [ ] Namespaces match folder paths exactly; one class per file; interface names describe capability;
       `[ExcludeFromCodeCoverage]` with a specific justification on both process/publish wrappers; no
@@ -355,7 +355,7 @@ cli-end-to-end-testing phase 1: E2E project + publish/run harness (tasks/todo/to
 - If Phase 2 or Phase 3 exist, revert them first (they depend on this phase). Then
   `git revert <this commit>`.
 - No data/config/feature-flag steps. The revert removes the new project and its `.sln` entry; verify
-  `dotnet build CodeWorker.sln` is green afterward.
+  `dotnet build CodeWorker.slnx` is green afterward.
 
 ## Phase Report (produce before finishing)
 

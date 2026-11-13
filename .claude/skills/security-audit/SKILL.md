@@ -96,7 +96,7 @@ cluster, and whether recent reviews still raise them.>
 <How reviews are produced: full-source scans (never diff-scoped), knowledge base (OWASP
 Top 10 / ASVS, Microsoft Secure Coding Guidance, CWE Top 25, CodeQL query classes), every
 finding classified by CWE and OWASP, resolution requires green build and tests
-(`dotnet build CodeWorker.sln` / `dotnet test CodeWorker.sln`) before a report moves to resolved/.
+(`dotnet build CodeWorker.slnx` / `dotnet test CodeWorker.slnx`) before a report moves to resolved/.
 Reports are committed to the repository, so the trail is tamper-evident through git
 history.>
 

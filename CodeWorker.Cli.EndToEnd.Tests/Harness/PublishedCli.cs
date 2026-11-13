@@ -48,7 +48,7 @@ public class PublishedCli : IAsyncLifetime
 
 		while (directory != null)
 		{
-			if (File.Exists(Path.Combine(directory.FullName, "CodeWorker.sln")))
+			if (File.Exists(Path.Combine(directory.FullName, "CodeWorker.slnx")))
 			{
 				return directory.FullName;
 			}
@@ -56,7 +56,7 @@ public class PublishedCli : IAsyncLifetime
 			directory = directory.Parent;
 		}
 
-		throw new DirectoryNotFoundException("Could not locate CodeWorker.sln above the test output directory.");
+		throw new DirectoryNotFoundException("Could not locate CodeWorker.slnx above the test output directory.");
 	}
 
 	private static async Task Publish(string projectPath, string outputDirectory)

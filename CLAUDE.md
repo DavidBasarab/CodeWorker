@@ -18,7 +18,7 @@ If anything below in the coding standards appears to conflict with the README, t
 
 ## Repository Layout
 
-Production projects with mirrored test projects, all in `CodeWorker.sln` (legacy `.sln` format) at the repo root:
+Production projects with mirrored test projects, all in `CodeWorker.slnx` at the repo root:
 
 | Path | Project | Purpose |
 |---|---|---|
@@ -31,8 +31,8 @@ All production namespaces start with `FatCat.CodeWorker.*`; test namespaces star
 
 Everything must build and every test must pass before work is considered done:
 ```bash
-dotnet build CodeWorker.sln
-dotnet test CodeWorker.sln
+dotnet build CodeWorker.slnx
+dotnet test CodeWorker.slnx
 ```
 
 ---

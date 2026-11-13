@@ -231,9 +231,9 @@ Implement the five files to green. No smoke check — nothing is wired yet.
 ## Definition of Done (all mandatory)
 
 - [ ] Tests written before implementation (red observed before green)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln` — all tests pass
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; then
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx` — all tests pass
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; then
       `dotnet build` again so CSharpier applies
 - [ ] Namespaces match folder paths exactly; one class per file (`IValidateIntent` lives in
       `ValidateIntent.cs`); `*Result` suffix on `IntentResult`; enum for the predictable failure set;

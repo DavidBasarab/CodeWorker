@@ -35,15 +35,15 @@ Grounded in `CodeWorker.Cli/README.md` and the current code:
 
 ## Acceptance Criteria
 
-- [ ] A new **`CodeWorker.Cli.EndToEnd.Tests`** project exists in `CodeWorker.sln`, and its tests are
+- [ ] A new **`CodeWorker.Cli.EndToEnd.Tests`** project exists in `CodeWorker.slnx`, and its tests are
       tagged with an xUnit **`Category=EndToEnd`** trait so the fast unit loop can exclude them
-      (`dotnet test CodeWorker.sln --filter "Category!=EndToEnd"`) and the E2E loop can select them
+      (`dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"`) and the E2E loop can select them
       (`--filter "Category=EndToEnd"`).
 - [ ] The suite **publishes the CLI once per test run** (`dotnet publish` of
       `CodeWorker.Cli/CodeWorker.Cli.csproj` to a temporary directory) via a shared xUnit fixture,
       exposes the resulting `FatCatCodeWorkerCli.exe` path, and deletes the temp directory on teardown.
       No test project-references the CLI (it is a black box); the CLI is located by walking up to the
-      directory that contains `CodeWorker.sln`.
+      directory that contains `CodeWorker.slnx`.
 - [ ] A reusable process runner invokes the published exe with an argument array, captures
       **stdout**, **stderr**, and **exit code** without deadlocking, and returns them as a value.
 - [ ] **Green path:** running `verify --intent <i> --production <p> --tests <t>` against three files
@@ -56,7 +56,7 @@ Grounded in `CodeWorker.Cli/README.md` and the current code:
 - [ ] **No-arguments path:** invoking the exe with no arguments prints the `Usage:` line.
 - [ ] Every E2E test asserts the process **exit code is 0** (documenting today's ADR-5 behavior), so
       the suite is the tripwire that fails the day a non-zero exit is wired.
-- [ ] The E2E suite passes (`dotnet test CodeWorker.sln --filter "Category=EndToEnd"`), the fast unit
+- [ ] The E2E suite passes (`dotnet test CodeWorker.slnx --filter "Category=EndToEnd"`), the fast unit
       suite still passes with the E2E tests excluded, and the whole solution builds with zero warnings.
 
 ## Out of Scope / Non-Goals

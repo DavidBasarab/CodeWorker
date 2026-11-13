@@ -47,8 +47,8 @@ complete instruction set. This runbook **drives** the phases; it never writes th
    - `git status --porcelain` is empty
    - The new commit's message references the phase file
    - The subagent did not report PHASE FAILED
-   - `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` is green
-   - `dotnet test CodeWorker.sln --filter "Category!=EndToEnd"` is green (the fast unit loop still
+   - `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` is green
+   - `dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"` is green (the fast unit loop still
      passes and did not trigger a publish)
 4. All checks pass → tell the user the phase is done (one line: commit hash + subject) and move to the
    next phase.

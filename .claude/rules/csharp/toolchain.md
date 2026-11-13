@@ -18,9 +18,9 @@ CSharpier owns **all** C# layout — braces, spacing, new lines, wrapping, singl
 
 Run it before committing — style and analyzers only, never `whitespace`:
 ```bash
-dotnet format style CodeWorker.sln                  # apply code-style fixes from .editorconfig
-dotnet format analyzers CodeWorker.sln              # apply analyzer fixes
-dotnet format style CodeWorker.sln --verify-no-changes   # CI / pre-commit gate
+dotnet format style CodeWorker.slnx                  # apply code-style fixes from .editorconfig
+dotnet format analyzers CodeWorker.slnx              # apply analyzer fixes
+dotnet format style CodeWorker.slnx --verify-no-changes   # CI / pre-commit gate
 ```
 
 If `dotnet format` changes something, that change is correct — do not revert it. Do not suppress an analyzer rule without a comment explaining why. Suppression format when genuinely necessary:
