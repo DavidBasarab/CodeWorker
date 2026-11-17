@@ -98,7 +98,9 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** a green result set serializes to a green JSON verdict + a clean report and
   exit 0; a set with any blocking failure serializes to a red verdict naming the gate/location/
   reason + a red report and a non-zero exit; both outputs are unit-tested against known result sets.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/foundation/verdict-model-reporting/ -->
+- **Plan:** [`verdict-model-reporting/00-overview.md`](verdict-model-reporting/00-overview.md) —
+  planned 2026-11-17: 6 phases in 3 waves; JSON verdict to an optional `--verdict <path>` file (user
+  decision); exit codes 0 green / 1 blocked / 2 invalid input / 3 unexpected error.
 
 ### 5. Language engine seam — `language-engine-seam`
 - **Scope:** Per-language engine resolution behind the gates: a capability interface
@@ -112,7 +114,9 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** resolving an engine for a C# unit of work returns the registered C# engine;
   an unsupported language returns a clear "no engine" error value (not an exception); the seam is
   fakeable and unit-tested; swapping/adding an engine needs no gate change.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/foundation/language-engine-seam/ -->
+- **Plan:** [`language-engine-seam/00-overview.md`](language-engine-seam/00-overview.md) —
+  planned 2026-11-17: 2 phases (a chain); identity-only `CSharpLanguageEngine` (user decision); no
+  `VerifyCommand` change, so it stays clear of item 4.
 
 ## Group decisions (lightweight ADRs)
 
@@ -197,8 +201,8 @@ resolve with **no module registration**. Scan order is not a contract, so orderi
 |---|---|---|---|
 | 1 | 1 `verify-command-surface` | Built (PR #12) | — |
 | 2 | 2 `intent-contract-model` | Built (PR #13) | — |
-| 3 | 3 `gate-pipeline-framework` | Planned | — |
-| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Not planned | Both depend only on item 3; separate folders (`Verdict/` vs `Engines/`). Shared hotspot to watch: both may touch `VerifyCommand.cs` — the plans must keep that edit in one item, or sequence it |
+| 3 | 3 `gate-pipeline-framework` | Built (PR #16, open) | — |
+| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Planned | Both depend only on item 3; separate folders (`Verdict/` vs `Engines/`). The `VerifyCommand.cs` hotspot is kept in item 4 only — item 5 adds no caller (its ADR-4) |
 
 **Critical path:** 1 → 2 → 3 → 4 (or 5).
 
@@ -214,14 +218,26 @@ edited freely.
 
 ## Next item
 
-**Build `gate-pipeline-framework`** (item 3) — it is **planned**; say **"run gate-pipeline-framework"**.
-Items 1 and 2 are built and merged (plans in `tasks/done/foundation/`).
+**Build item wave 4: `verdict-model-reporting` and `language-engine-seam` together** — both are
+**planned**. Items 1–3 are built (1 and 2 merged, plans in `tasks/done/foundation/`; item 3 is on
+PR #16, stacked on #15).
 
-**Then items 4 and 5 together.** `verdict-model-reporting` and `language-engine-seam` both depend
-only on item 3, so once item 3 is merged they form one **item wave**: plan both ("plan verdict model
-reporting" and "plan language engine seam"), then build them in parallel on separate branches. Do
-not plan them before item 3 is built — the one-item-at-a-time rule now means one *wave* of
-independent items at a time.
+Each item has its own branch and orchestrator (`run verdict-model-reporting`,
+`run language-engine-seam`). To build them at the same time from one session, say **"run foundation
+item wave 4"**: the session's checkout stays on `verdict-model-reporting`, `language-engine-seam` is
+checked out as a sibling worktree (`../CodeWorker-language-engine-seam`), and the phases interleave
+under the 3-subagent cap:
+
+| Step | `verdict-model-reporting` | `language-engine-seam` | Subagents |
+|---|---|---|---|
+| 1 | Wave 1 — Phases 1, 2, 3 | — | 3 |
+| 2 | Wave 2 — Phases 4, 5 | Wave 1 — Phase 1 | 3 |
+| 3 | Wave 3 — Phase 6 | Wave 2 — Phase 2 | 2 |
+
+One watchdog covers every subagent. A failure in one item halts only that item.
+
+After both merge, item 5 is the last Foundation item: the group is done, and the next planning step
+is the next epic group in `epics.md`.
 
 ## Assumptions & open questions
 
@@ -230,15 +246,16 @@ independent items at a time.
   to avoid a future refactor as more commands are added. See ADR-G1.
 - **The CLI has no command infrastructure yet.** Item 1 is the first to add it; there is no
   existing CLI `ICommand`/`CommandResolver`/`CommandModule` to extend — only `IProcessArguments`.
-- **Engine seam ships without a real engine.** Item 5 delivers the seam + registration point; the
-  in-process Roslyn C# engine is the separate `Engine` group. A placeholder/no-op engine likely
-  backs the seam until then — confirm that's acceptable, or fold the first real engine registration
-  into the `Engine` group and have item 5 register nothing concrete.
+- **[Resolved 2026-11-17] Engine seam ships without a real engine.** Item 5 registers an
+  **identity-only** `CSharpLanguageEngine` (language + `.cs` extension, no compile/test members); the
+  `Engine` group adds real members. See `language-engine-seam/00-overview.md` ADR-1.
 - **[Resolved 2026-10-14] Intent schema field names.** Pinned by item 2's plan as
   `{ why, class, responsibility, behaviors[] of { behavior, test? } }`, unknown properties rejected
   (see `tasks/done/foundation/intent-contract-model/00-overview.md` ADR-1/ADR-5).
-- **Verdict JSON shape** (the `Stop`-hook contract) is defined in item 4; the hook-wiring epic
-  (Integration group) consumes it later. Item 4 owns the field names; pin them there.
+- **[Resolved 2026-11-17] Verdict JSON shape** (the `Stop`-hook contract) is pinned by item 4's plan:
+  `{ status, message, gates[] of { name, stage, status, durationMilliseconds, findings[] of
+  { filePath, line?, reason } } }`, camelCase enum strings, written to the `--verdict <path>` file
+  (see `verdict-model-reporting/00-overview.md` ADR-4/ADR-5). The Integration group consumes it.
 - **Sub-10s budget does not bite in Foundation.** The spine has no Roslyn/LLM work; the budget
   applies once the Engine and gate groups land. Foundation just must not design anything that
   forces per-call `dotnet build`/`dotnet test` later (it doesn't — gates are an abstraction here).
