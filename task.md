@@ -88,7 +88,7 @@ Each phase must be:
 
 ## Commit Policy
 
-- [ ] Work happens on the task's feature branch (`task/{WORK_ITEM}`), never on main  (only create the branch if not on main if you are on a different branch then main use the current branch)
+- [ ] Work happens on the task's feature branch, named with the bare work-item slug (`{WORK_ITEM}`, e.g. `gate-pipeline-framework` — no `task/` or other prefix), never on main. If you are already on a branch other than main, use the current branch; only create the branch when you are on main
 - [ ] Create the phase commit locally; **do not push to remote** — human review gates the push
 
 ## Phase Report
