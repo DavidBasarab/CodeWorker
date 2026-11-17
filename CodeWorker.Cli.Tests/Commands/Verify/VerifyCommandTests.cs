@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Cli.Commands.Verify;
+using FatCat.CodeWorker.Cli.Commands.Verify.Gates;
 using FatCat.CodeWorker.Cli.Commands.Verify.Intent;
 using Serilog;
 
@@ -7,28 +8,35 @@ namespace Testing.FatCat.CodeWorker.Cli.Commands.Verify;
 public class VerifyCommandTests
 {
 	private const string IntentSummaryTemplate = "verify: intent for {Class} declares {BehaviorCount} behaviors";
+	private const string PipelineSummaryTemplate =
+		"verify: gate pipeline finished with {GateCount} gates, blocked: {IsBlocked}";
 
 	private readonly IParseVerifyArguments parseVerifyArguments;
 	private readonly IParseIntent parseIntent;
+	private readonly IRunGatePipeline runGatePipeline;
 	private readonly ILogger logger;
 	private readonly VerifyCommand verifyCommand;
 
 	private VerifyArgumentsResult currentResult;
 	private IntentResult currentIntentResult;
+	private GatePipelineResult currentPipelineResult;
 
 	public VerifyCommandTests()
 	{
 		parseVerifyArguments = A.Fake<IParseVerifyArguments>();
 		parseIntent = A.Fake<IParseIntent>();
+		runGatePipeline = A.Fake<IRunGatePipeline>();
 		logger = A.Fake<ILogger>();
 
 		currentResult = ValidResult();
 		currentIntentResult = ValidIntentResult();
+		currentPipelineResult = new GatePipelineResult { IsBlocked = false, GateResults = [] };
 
 		A.CallTo(() => parseVerifyArguments.Parse(A<string[]>._)).ReturnsLazily(() => currentResult);
 		A.CallTo(() => parseIntent.Parse(A<VerifyArgumentsResult>._)).ReturnsLazily(() => currentIntentResult);
+		A.CallTo(() => runGatePipeline.Run(A<VerificationContext>._)).ReturnsLazily(() => currentPipelineResult);
 
-		verifyCommand = new VerifyCommand(parseVerifyArguments, parseIntent, logger);
+		verifyCommand = new VerifyCommand(parseVerifyArguments, parseIntent, runGatePipeline, logger);
 	}
 
 	private static VerifyArgumentsResult ValidResult()
@@ -164,5 +172,71 @@ public class VerifyCommandTests
 		await verifyCommand.Execute(Faker.Create<string[]>());
 
 		A.CallTo(() => logger.Information(IntentSummaryTemplate, A<string>._, A<int>._)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task RunTheGatePipelineWhenTheIntentIsValid()
+	{
+		await verifyCommand.Execute(Faker.Create<string[]>());
+
+		A.CallTo(() => runGatePipeline.Run(A<VerificationContext>._)).MustHaveHappenedOnceExactly();
+	}
+
+	[Fact]
+	public async Task NotRunTheGatePipelineWhenArgumentsAreInvalid()
+	{
+		currentResult = InvalidResult();
+
+		await verifyCommand.Execute(Faker.Create<string[]>());
+
+		A.CallTo(() => runGatePipeline.Run(A<VerificationContext>._)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task NotRunTheGatePipelineWhenTheIntentIsInvalid()
+	{
+		currentIntentResult = InvalidIntentResult();
+
+		await verifyCommand.Execute(Faker.Create<string[]>());
+
+		A.CallTo(() => runGatePipeline.Run(A<VerificationContext>._)).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public async Task PassTheParsedPathsAndIntentInTheContext()
+	{
+		VerificationContext capturedContext = null;
+
+		A.CallTo(() => runGatePipeline.Run(A<VerificationContext>._))
+			.Invokes((VerificationContext context) => capturedContext = context)
+			.ReturnsLazily(() => currentPipelineResult);
+
+		await verifyCommand.Execute(Faker.Create<string[]>());
+
+		capturedContext
+			.Should()
+			.BeEquivalentTo(
+				new VerificationContext
+				{
+					IntentPath = currentResult.IntentPath,
+					ProductionPath = currentResult.ProductionPath,
+					TestsPath = currentResult.TestsPath,
+					Intent = currentIntentResult.Intent,
+				}
+			);
+	}
+
+	[Fact]
+	public async Task LogThePipelineSummary()
+	{
+		currentPipelineResult = new GatePipelineResult
+		{
+			IsBlocked = true,
+			GateResults = [Faker.Create<GateResult>(), Faker.Create<GateResult>()],
+		};
+
+		await verifyCommand.Execute(Faker.Create<string[]>());
+
+		A.CallTo(() => logger.Information(PipelineSummaryTemplate, 2, true)).MustHaveHappenedOnceExactly();
 	}
 }

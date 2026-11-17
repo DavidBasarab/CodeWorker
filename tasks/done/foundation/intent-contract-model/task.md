@@ -82,7 +82,7 @@ Grounded in `CodeWorker.Cli/README.md`:
 
 ## Feature Context
 
-- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md) — item 2, and the group
+- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md) — item 2, and the group
   ADRs (ADR-G2 values-not-exceptions; ADR-G3 `Commands/Verify/Intent/`; ADR-G4 plain classes +
   `System.Text.Json`; ADR-G5 capability interfaces + scanning).
 - Previous item (built): [`tasks/done/foundation/verify-command-surface/`](../../../done/foundation/verify-command-surface/00-overview.md)

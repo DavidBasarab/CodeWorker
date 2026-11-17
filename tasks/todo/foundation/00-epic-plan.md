@@ -66,10 +66,11 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** a valid intent JSON produces a populated intent-context object with all
   behaviors; each invalid payload class returns a distinct validation error value naming what is
   wrong; round-trips are unit-tested against sample intent JSON.
-- **Plan:** [`tasks/todo/foundation/intent-contract-model/`](intent-contract-model/00-overview.md)
+- **Plan:** [`tasks/done/foundation/intent-contract-model/`](../../done/foundation/intent-contract-model/00-overview.md)
   — planned 2026-10-14 (task.md + 00-overview + 3 phases + orchestrator). User decisions: observable
   phrasing enforced by a leading-verb allow-list; the intent `class` must match the production file
-  name.
+  name. **Built and merged 2026-10-14 (PR #13)**; phase 2 was re-run once after the plan was amended
+  for the toolkit's `ReadAllText` returning `""` on a missing file (see its `failure-report.md`).
 
 ### 3. Gate pipeline framework — `gate-pipeline-framework`
 - **Scope:** The `IVerificationGate` abstraction and the **fail-fast runner** (README "How It
@@ -82,7 +83,10 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** given an ordered set of fake gates, the runner runs them cheapest-first,
   stops at the first blocking failure (later gates never run), and returns each gate's structured
   result with timing; an all-pass run returns all results; unit-tested with faked `IVerificationGate`s.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/foundation/gate-pipeline-framework/ -->
+- **Plan:** [`tasks/todo/foundation/gate-pipeline-framework/`](gate-pipeline-framework/00-overview.md)
+  — planned 2026-11-17 (task.md + 00-overview + 3 phases in 2 waves + orchestrator). Gates ordered
+  by a `GateStage` enum; `GateStatus { Passed, Warning, Failed, Skipped }`; per-gate duration via a
+  CLI `IClock`; `verify` runs the pipeline after a valid intent and logs a summary.
 
 ### 4. Verdict model + reporting — `verdict-model-reporting`
 - **Scope:** Aggregate the gate results (item 3) into one **verdict**: a machine-readable JSON
@@ -180,10 +184,29 @@ instances / lifetimes scanning can't infer; otherwise let scanning resolve singl
 **Alternatives rejected:** registering every type explicitly in the module (fights the scanning
 convention; noise); a service-locator pull from `SystemScope` inside the runner (banned — inject
 the gates/engine resolver).
+**Corrected (2026-11-17, while planning item 3):** scanning already registers **every**
+implementation — `SystemScope.BuildContainer` uses `RegisterAssemblyTypes(...).AsImplementedInterfaces()`
+with no single-implementation filter — so `IEnumerable<IVerificationGate>` (and later the engines)
+resolve with **no module registration**. Scan order is not a contract, so ordering lives in code
+(item 3 ADR-2: a `GateStage` enum). The module still registers only what scanning can't build
+(the Serilog instance).
+
+## Item waves
+
+| Wave | Items | State | Why independent |
+|---|---|---|---|
+| 1 | 1 `verify-command-surface` | Built (PR #12) | — |
+| 2 | 2 `intent-contract-model` | Built (PR #13) | — |
+| 3 | 3 `gate-pipeline-framework` | Planned | — |
+| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Not planned | Both depend only on item 3; separate folders (`Verdict/` vs `Engines/`). Shared hotspot to watch: both may touch `VerifyCommand.cs` — the plans must keep that edit in one item, or sequence it |
+
+**Critical path:** 1 → 2 → 3 → 4 (or 5).
 
 ## Ordering rule
 
-Detailed phased plans are written **one item at a time** (Mode B), only when the item is next.
+Detailed phased plans are written **one item wave at a time** (Mode B), only when the wave is next;
+items in the same wave are planned together and built in parallel on separate branches. (Changed
+2026-11-17 from one item at a time — the user wants the wave methodology at every level.)
 Reverting or re-planning a built item never strands a downstream plan, because downstream items
 are not planned until reached. If, after building item 1, the command-surface shape changes the
 design for items 2–5, only item 1's plan exists to reconcile — the rest are still one-liners here,
@@ -191,11 +214,14 @@ edited freely.
 
 ## Next item
 
-**`gate-pipeline-framework`** (item 3) — say **"plan gate pipeline framework"** (or "plan the next
-foundation item") to expand it. Item 1 (`verify-command-surface`) is built and merged. Item 2
-(`intent-contract-model`) is **planned** (see its folder) and ready to build via
-**"run intent-contract-model"**; build it before planning item 3 so any intent-model shape change
-can be reconciled first (the one-at-a-time rule).
+**Build `gate-pipeline-framework`** (item 3) — it is **planned**; say **"run gate-pipeline-framework"**.
+Items 1 and 2 are built and merged (plans in `tasks/done/foundation/`).
+
+**Then items 4 and 5 together.** `verdict-model-reporting` and `language-engine-seam` both depend
+only on item 3, so once item 3 is merged they form one **item wave**: plan both ("plan verdict model
+reporting" and "plan language engine seam"), then build them in parallel on separate branches. Do
+not plan them before item 3 is built — the one-item-at-a-time rule now means one *wave* of
+independent items at a time.
 
 ## Assumptions & open questions
 
@@ -210,7 +236,7 @@ can be reconciled first (the one-at-a-time rule).
   into the `Engine` group and have item 5 register nothing concrete.
 - **[Resolved 2026-10-14] Intent schema field names.** Pinned by item 2's plan as
   `{ why, class, responsibility, behaviors[] of { behavior, test? } }`, unknown properties rejected
-  (see `intent-contract-model/00-overview.md` ADR-1/ADR-5).
+  (see `tasks/done/foundation/intent-contract-model/00-overview.md` ADR-1/ADR-5).
 - **Verdict JSON shape** (the `Stop`-hook contract) is defined in item 4; the hook-wiring epic
   (Integration group) consumes it later. Item 4 owns the field names; pin them there.
 - **Sub-10s budget does not bite in Foundation.** The spine has no Roslyn/LLM work; the budget

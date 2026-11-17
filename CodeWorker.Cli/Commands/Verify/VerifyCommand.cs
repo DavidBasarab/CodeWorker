@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Cli.Commands;
+using FatCat.CodeWorker.Cli.Commands.Verify.Gates;
 using FatCat.CodeWorker.Cli.Commands.Verify.Intent;
 using Serilog;
 
@@ -6,8 +7,12 @@ namespace FatCat.CodeWorker.Cli.Commands.Verify;
 
 public interface IRunVerifyCommand : ICommand { }
 
-public class VerifyCommand(IParseVerifyArguments parseVerifyArguments, IParseIntent parseIntent, ILogger logger)
-	: IRunVerifyCommand
+public class VerifyCommand(
+	IParseVerifyArguments parseVerifyArguments,
+	IParseIntent parseIntent,
+	IRunGatePipeline runGatePipeline,
+	ILogger logger
+) : IRunVerifyCommand
 {
 	public async Task Execute(string[] args)
 	{
@@ -32,6 +37,23 @@ public class VerifyCommand(IParseVerifyArguments parseVerifyArguments, IParseInt
 		}
 
 		LogIntentSummary(intentResult.Intent);
+
+		var context = BuildContext(arguments, intentResult.Intent);
+
+		var pipelineResult = await runGatePipeline.Run(context);
+
+		LogPipelineSummary(pipelineResult);
+	}
+
+	private static VerificationContext BuildContext(VerifyArgumentsResult arguments, IntentContract intent)
+	{
+		return new VerificationContext
+		{
+			IntentPath = arguments.IntentPath,
+			ProductionPath = arguments.ProductionPath,
+			TestsPath = arguments.TestsPath,
+			Intent = intent,
+		};
 	}
 
 	private void LogParsedArguments(VerifyArgumentsResult arguments)
@@ -50,6 +72,15 @@ public class VerifyCommand(IParseVerifyArguments parseVerifyArguments, IParseInt
 			"verify: intent for {Class} declares {BehaviorCount} behaviors",
 			intent.Class,
 			intent.Behaviors.Count
+		);
+	}
+
+	private void LogPipelineSummary(GatePipelineResult result)
+	{
+		logger.Information(
+			"verify: gate pipeline finished with {GateCount} gates, blocked: {IsBlocked}",
+			result.GateResults.Count,
+			result.IsBlocked
 		);
 	}
 }
