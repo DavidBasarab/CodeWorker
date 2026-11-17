@@ -1,20 +1,22 @@
 ---
 name: epic-planning
-description: Plan an epic from epics.md incrementally, one checklist item at a time, following the Apostil convention. Use when the user says "epic planning for <group>", "plan the <group> epic", "plan the next item", "plan <item>", or similar. Has two modes — (A) write the epic plan: a roadmap of the group's checklist items in dependency order, and (B) plan one item: expand a single checklist item into a task.md specification plus a phased implementation plan (00-overview + NN-phase files + orchestrator) under tasks/todo/. Plans one item at a time on purpose so a change of direction never strands detailed plans for items not yet reached. This skill writes ONLY planning documents — it NEVER writes production code and NEVER runs an orchestrator.
+description: Plan an epic from epics.md incrementally, one item wave at a time, always using the wave methodology, following the Apostil convention. Use when the user says "epic planning for <group>", "plan the <group> epic", "plan the next item", "plan <item>", or similar. Has two modes — (A) write the epic plan: a roadmap of the group's checklist items in dependency order, and (B) plan one item: expand a single checklist item into a task.md specification plus a phased implementation plan (00-overview + NN-phase files + orchestrator) under tasks/todo/. Plans one item wave (the items whose dependencies are all built) at a time on purpose so a change of direction never strands detailed plans for items not yet reached, and always uses the wave methodology — independent phases, and independent items, run in parallel. This skill writes ONLY planning documents — it NEVER writes production code and NEVER runs an orchestrator.
 ---
 
 # Epic Planning
 
 Turn an epic from [`epics.md`](../../../epics.md) into actionable plans, following the **Workflow** at the top of that file and the `task.md` template. This is a **specification-and-planning** skill: it writes planning documents only. It never writes production code, never commits, and never runs an orchestrator — running is a separate, explicit step the user drives.
 
-## The guiding principle — plan one item at a time
+## The guiding principles — plan one item wave at a time, and always use waves
 
-An epic is a `###` group of checklist items in `epics.md` (e.g. **Foundation** under MVP). The whole point of this skill is to **avoid expanding every item into a detailed plan up front.** Detailed, phased plans are written **one checklist item at a time**, only when that item is next. Items not yet reached stay as one-line roadmap entries. This is deliberate: if the user changes direction after building an early item, no downstream detailed plan is stranded or has to be thrown away.
+An epic is a `###` group of checklist items in `epics.md` (e.g. **Foundation** under MVP). The whole point of this skill is to **avoid expanding every item into a detailed plan up front.** Detailed, phased plans are written only for the **current item wave**: the not-yet-built items whose dependencies are all built. Items not yet reached stay as one-line roadmap entries. This is deliberate: if the user changes direction after building an early item, no downstream detailed plan is stranded or has to be thrown away.
+
+**The wave methodology is always used — at both levels.** Within an item, phases are grouped into waves and independent phases run as parallel subagents (see **Parallel execution rule**). Within an epic, items whose dependencies are all built form an **item wave**: they are planned together (one Mode B pass per item) and built in parallel on separate branches. Every plan, at either level, is shaped to maximize parallelism — never default to a linear order. A plan whose graph really is a chain still gets a wave table and a wave-driven orchestrator, with a sentence saying why no two phases could share a wave.
 
 So the skill has two modes:
 
 - **Mode A — Write the epic plan (the roadmap).** Produced once per epic. Lists the group's checklist items in dependency order, records group-level decisions, and names which item is next. **No phase files.**
-- **Mode B — Plan one item.** Produced each time the user is ready for the next item. Fills out `task.md` as that item's specification and produces its Apostil-style phased plan (`00-overview.md`, `NN-*.md` phase files, `orchestrator.md`).
+- **Mode B — Plan one item.** Produced for each item in the current item wave (several items in one request when the user asks for the next wave). Fills out `task.md` as that item's specification and produces its Apostil-style phased plan (`00-overview.md`, `NN-*.md` phase files, `orchestrator.md`).
 
 ## Step 1 — Determine the mode and resolve the target
 
@@ -23,7 +25,7 @@ Read the user's phrasing:
 | User says | Mode | Target |
 |---|---|---|
 | "epic planning for foundation" / "plan the foundation epic" | A | The `### Foundation` group in `epics.md` |
-| "plan the next item" / "plan the next foundation item" | B | The first not-`[x]` item in that group without a plan yet |
+| "plan the next item" / "plan the next foundation item" / "plan the next wave" | B | Every not-`[x]` item in that group without a plan whose dependencies are all built (the current item wave) — plan each one |
 | "plan <item name>" / "plan verify command surface" | B | The named checklist item |
 | "re-plan <item>" / "the plan for <item> is wrong, redo it" | B | The named item (overwrite its existing plan) |
 
@@ -53,7 +55,8 @@ The epic plan is a **roadmap**, not a set of phase plans. It contains:
 - The group's checklist items **in dependency order**, each with: a one-paragraph scope, its dependencies on other items, the acceptance shape (what "done" looks like), and a `Plan:` field that is `not yet planned` initially and becomes a link to the item's folder once Mode B runs.
 - **Group-level decisions (lightweight ADRs)** that span more than one item — the cross-cutting shape choices (interfaces, folder placement, naming) grounded in the README and `.claude/rules`. Per-item ADRs belong in that item's `00-overview.md`, not here.
 - **Assumptions and open questions** for the group. Flag anything that would change the design.
-- **The build order and the "next" pointer** — which item is planned next, and the one-at-a-time rule restated so anyone reading knows downstream items are intentionally still one-liners.
+- **Item waves** — the items grouped into waves by dependency (`Wave | Items | Why independent`), and the critical path through the group.
+- **The build order and the "next" pointer** — which item wave is planned next, and the one-wave-at-a-time rule restated so anyone reading knows downstream items are intentionally still one-liners.
 
 Do **not** create per-item folders or phase files in Mode A. After writing, tell the user the epic-plan path and name the next item to plan.
 
@@ -86,15 +89,25 @@ Do **not** create per-item folders or phase files in Mode A. After writing, tell
 **Context:** ...
 **Alternatives rejected:** ...
 
+## Item waves
+
+| Wave | Items | Why independent |
+|---|---|---|
+| 1 | <item-slug> | — |
+| 2 | <item-slug>, <item-slug> | <both depend only on wave 1; disjoint folders/files> |
+
+**Critical path:** <longest item chain>.
+
 ## Ordering rule
 
-Detailed phased plans are written one item at a time (Mode B), only when the item is next.
+Detailed phased plans are written one item wave at a time (Mode B), only when the wave is next.
+Items in the same wave are planned together and built in parallel on separate branches.
 Reverting or re-planning a built item never strands a downstream plan, because downstream items
 are not planned until reached.
 
 ## Next item
 
-**<item-slug>** — say "plan <item name>" (or "plan the next <group> item") to expand it.
+**<item-slug(s)>** — say "plan <item name>" (or "plan the next <group> wave") to expand them.
 
 ## Assumptions & open questions
 
@@ -116,7 +129,7 @@ Write `00-overview.md` in the item folder, matching the Apostil overview shape:
 - **Work Item** — restate the scope and the *current state of the code* that shapes the design (verified against the actual files, not assumed).
 - **Acceptance Criteria → Phase Map** — a table mapping each acceptance criterion to the phase(s) that prove it.
 - **Phases & Dependency Graph** — a table: phase #, file, risk (low/medium/high), `Depends on`, `Depended on by`, plus the revert cascade in reverse dependency order.
-- **Execution waves** — the phases grouped into waves for parallel execution (see **Parallel execution rule** below): each wave lists its phases and, for any wave with more than one phase, the files each phase creates or modifies, proving the sets are disjoint.
+- **Execution waves** (mandatory, every plan) — the phases grouped into waves for parallel execution (see **Parallel execution rule** below): a wave table (`Wave | Phases | Runs as`), the critical path, and, for any wave with more than one phase, the files each phase creates or modifies, proving the sets are disjoint and free of shared hotspots (`task.md` Phase Requirements). Explain how the split maximizes parallelism, or why the graph is a chain.
 - **Orchestrator** — one line on how to run it (see 4d).
 - **Decisions (lightweight ADRs)** — per-item decisions: decision, context, alternatives rejected.
 - **Assumptions** and **Open Questions** — flag design-changing ambiguities; do not guess.
@@ -132,6 +145,10 @@ Split the item into a **handful of atomic phases** (≈3–6; `epics.md` says an
 - **Verifiable** — a `## Definition of Done` checklist (see below).
 - **Contract-defining** — a `## Hand-off` section: the interfaces, types, and routes it exposes to later phases.
 - **Risk-rated** — low/medium/high with the reason; anything touching auth, anonymous endpoints, data migration, or public API contracts is automatically high.
+- **Footprint-declared** — a `## Touches` section listing every file it creates/modifies/deletes and any exclusive runtime resource.
+- **Parallel-classified** — declares `Wave:` and `Parallel with:` (phase numbers, or `none` and why), per the parallel-safe rules in `task.md`.
+
+Techniques for more parallelism (apply before settling on a split): land the shared contract (interfaces, value/result types, enums) in a small early phase so consumers and implementers fan out against it; pull a shared-hotspot edit into that contract phase when it is the only thing serializing two phases; pull a secondary concern (timing, logging, a second output) out of a critical-path phase so it runs alongside the next wave instead of in front of it; add a property to the contract early (with a default) so a later phase only fills it.
 
 Every phase's `## Definition of Done` uses the `task.md` "Definition of Done (every phase)" checklist verbatim in spirit — TDD (red before green), zero warnings, namespaces match folders, all `.claude/rules/csharp` rules, no banned patterns, `dotnet test` green, `dotnet format` style + analyzers, `dotnet build` for CSharpier, then the **review loop** (`unit-test-review` must end `Unit test review: PASS` → `code-review` → `code-security-review`, restarting from the top after any fix), one commit on the task branch, no push.
 
@@ -143,7 +160,7 @@ Write `orchestrator.md` in the item folder: the runbook that executes the phases
 
 ### Parallel execution rule
 
-Use parallel subagents whenever the dependency graph allows it. The orchestrator executes the plan in **waves**, not one phase at a time:
+**Always** — every orchestrator executes the plan in **waves**, never as a plain phase list, and runs every multi-phase wave as parallel subagents (at most 3 at once):
 
 - **Wave construction.** A wave is every not-yet-run phase whose `Depends on:` phases have all completed. Phases in the same wave must create/modify **disjoint sets of files** — the overview's Execution waves table lists them. If two phases would touch the same file, they are not independent: add the dependency and put them in different waves.
 - **Single-phase wave.** Run it exactly as before: one fresh subagent, working directly on the task branch.
@@ -156,7 +173,7 @@ Use parallel subagents whenever the dependency graph allows it. The orchestrator
 
 ### 4e — Update the epic plan
 
-In `00-epic-plan.md`, change that item's `Plan:` from `not yet planned` to the item folder path, and update the **Next item** pointer to the following item. Do **not** flip the `epics.md` checkbox — that happens only when the item's work is actually built and merged (the human's call, per the `epics.md` workflow).
+In `00-epic-plan.md`, change that item's `Plan:` from `not yet planned` to the item folder path, and update the **Next item** pointer to the next item wave (and the **Item waves** table if the dependency picture changed). Do **not** flip the `epics.md` checkbox — that happens only when the item's work is actually built and merged (the human's call, per the `epics.md` workflow).
 
 ### Phase-file template
 
@@ -166,7 +183,17 @@ In `00-epic-plan.md`, change that item's `Plan:` from `not yet planned` to the i
 - **Work item:** <item-slug> (see `tasks/todo/<group-slug>/<item-slug>/00-overview.md`)
 - **Depends on:** <phase(s), or —>
 - **Depended on by:** <phase(s), or —>
+- **Wave:** <N>
+- **Parallel with:** <phase(s), or none — why>
 - **Risk:** <low|medium|high> — <why; auto-high triggers if applicable>
+
+## Touches
+
+- Creates: <files>
+- Modifies: <files>
+- Exclusive runtime resources: <none, or which>
+
+In a parallel wave, create or modify only these files — sibling phases are running at the same time.
 
 ## Context (complete handoff — read before coding)
 
@@ -225,8 +252,8 @@ this plan and why — an empty log is a claim, not a default); open questions/ri
 ## Hard rules for this skill
 
 - **Planning documents only. Never write production code, never edit source files, never commit, never run an orchestrator.** Those are separate, explicit steps the user drives.
-- **Parallel subagents when possible.** Every orchestrator runs independent phases (disjoint files, all dependencies met) concurrently, one isolated-worktree subagent each, per the Parallel execution rule. A strictly sequential orchestrator is only correct when the dependency graph is a chain.
-- **One item at a time.** In Mode B, expand exactly one checklist item. Never batch-expand the whole group into phase plans — that defeats the "don't stall" purpose.
+- **Always use the wave methodology.** Every overview has an Execution waves table; every orchestrator runs wave by wave and runs independent phases (disjoint files, no shared hotspot, all dependencies met) concurrently, one isolated-worktree subagent each, per the Parallel execution rule. Shape every plan to maximize parallelism; a chain is acceptable only when the overview explains why no two phases can share a wave.
+- **One item wave at a time.** In Mode B, expand only items whose dependencies are all built — all of them when the user asks for the next wave. Never batch-expand items from later waves — that defeats the "don't stall" purpose.
 - **Never flip an `epics.md` checkbox to `[x]`.** That marks *built and merged* work; only the human does it after the item ships.
 - **Ground every plan in `CodeWorker.Cli/README.md` and `.claude/rules`.** Where the README and the code disagree, the code is authoritative — plan against the code and flag the stale README.
 - **Match the surrounding abstraction level.** Do not invent patterns or abstractions that are not already in the codebase (per `naming-and-structure.md`).

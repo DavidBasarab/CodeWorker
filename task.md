@@ -32,6 +32,8 @@ This is a **specification and planning task. No production code is written in th
 - [ ] Record cross-cutting decisions in `00-overview.md` (treat these as lightweight ADRs — architecture decision records: decision, context, alternatives rejected)
 - [ ] List **assumptions and open questions** in the overview. If an ambiguity materially changes the design, stop and ask rather than guess
 - [ ] Keep commits small.
+- [ ] **Plan for parallelism.** Shape the phases so as much work as possible can run at the same time. Put the shared contract (interfaces, value types, result/enum types, settings classes) in an early, small phase. Then fan the independent work out against that contract as separate phases. Pull a shared hotspot edit (see Phase Requirements) into the earlier contract phase when that is the only thing serializing two phases. Do not split a phase artificially just to parallelize: every phase must still be a coherent, atomic commit.
+- [ ] **Always use waves.** Group the phases into **waves** in `00-overview.md` — every plan, even one whose graph is a straight chain (then every wave holds one phase, and the overview says why no two phases could share a wave). A wave is a set of phases whose dependencies all sit in earlier waves and that are pairwise **parallel-safe** (see Phase Requirements). Include the dependency graph, a wave table (`Wave | Phases | Why parallel-safe`), each multi-phase wave's write sets (proving them disjoint), and the critical path: the longest dependency chain, which sets the minimum number of sequential steps.
 
 ## Phase Requirements
 
@@ -44,11 +46,25 @@ Each phase must be:
 - [ ] **Verifiable** — each phase includes verification steps and a `## Definition of Done` checklist
 - [ ] **Contract-defining** — each phase ends with a `## Hand-off` section: the interfaces, types, and routes it exposes to later phases
 - [ ] **Risk-rated** — each phase declares a risk level (low / medium / high) and why. Anything touching auth, anonymous endpoints, data migration, or public API contracts is automatically high and flagged for extra human review
+- [ ] **Footprint-declared:** each phase has a `## Touches` section. It lists every file or folder the phase creates, modifies or deletes (best estimate, globs allowed), plus any shared runtime resource it needs exclusively: a real Claude CLI invocation, a tracked repository's `tasks/` folders, the installed CLI directory, fixed ports, or a real external service.
+- [ ] **Parallel-classified:** each phase declares `Wave:` and `Parallel with:` (phase numbers, or `none` and why). Two phases are parallel-safe only when **all** of these hold:
+  - neither depends on the other, directly or transitively;
+  - their `Touches` write sets are disjoint;
+  - they do not both edit a **shared hotspot**: `*Module.cs` (`CodeWorkerModule`, `CodeWorkerCliModule`), `GlobalUsings.cs`, `*.csproj` / `CodeWorker.slnx`, `README.md` / `CodeWorker.Cli/README.md`, `epics.md`, `.editorconfig` / `.csharpierrc`, or the E2E harness (`CodeWorker.Cli.EndToEnd.Tests/Harness/`);
+  - neither needs an exclusive runtime resource (above);
+  - neither is a human-gated phase, an E2E walk, or a report that rolls up other phases. These always run alone.
+  When in doubt, serialize. A wrong "parallel" claim costs a merge conflict and a halted pipeline. A wrong "serial" claim only costs time.
 
 ## Orchestrator
 
-- [ ] Create a phase orchestrator (runbook or script) that executes phases in dependency order
+- [ ] Create a phase orchestrator (runbook or script) that executes phases **wave by wave**, in dependency order
 - [ ] The orchestrator MUST spawn a **fresh session per phase** (context isolation is not optional — never run multiple phases in one session/context window)
+- [ ] **Parallel waves:** a wave with one phase runs in the main working tree. A wave with several phases runs them concurrently, **at most 3 at a time**, launched in a single message, each phase in its own fresh session and its own git worktree (the Agent tool's `isolation: "worktree"`). Two sessions never share a working tree, because builds, tests and the git index collide.
+  - Each phase meets its full Definition of Done and commits once, inside its worktree.
+  - When every phase in the wave has committed, verify each worktree (exactly one commit ahead of the wave base, clean tree, commit touches only its `Touches`), then cherry-pick the phase commits onto the task branch **in phase-number order**. Do not squash, amend or rewrite them.
+  - **Integration gate** after each multi-phase wave, on the task branch: `dotnet build CodeWorker.slnx` with zero warnings, then `dotnet test CodeWorker.slnx` green. A cherry-pick conflict or a red integration gate means the plan's parallel claim was wrong, so treat it as a failure (halt policy below). Do not hand-merge it.
+  - After a successful integration, remove the wave's worktrees and branches (`git worktree remove`, `git branch -D`).
+  - If one phase in a wave fails, let its siblings finish. Integrate only the phases that passed and do not depend on the failed one, then halt.
 - [ ] Commit boundary between every phase; the orchestrator never squashes or amends
 - [ ] **Halt-on-failure policy:** if a phase's Definition of Done cannot be met after 2 self-correction attempts, STOP the pipeline, leave the working tree clean (stash or discard), write a failure report, and do not start dependent phases
 - [ ] The orchestrator never force-pushes, never rebases published history, and never pushes to remote
