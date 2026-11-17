@@ -60,7 +60,7 @@ criteria.
 
 | Phase | File | Risk | Depends on | Depended on by |
 |---|---|---|---|---|
-| 1 — Verdict model + builder (`Verdict/`: `VerdictStatus`, `GateVerdict`, `Verdict`, `IBuildVerdict`/`BuildVerdict`) | `01-verdict-model-and-builder.md` | Low — new isolated types + pure mapping | — | 4, 5, 6 |
+| 1 — Verdict model + builder (`Verdicts/`: `VerdictStatus`, `GateVerdict`, `Verdict`, `IBuildVerdict`/`BuildVerdict`) | `01-verdict-model-and-builder.md` | Low — new isolated types + pure mapping | — | 4, 5, 6 |
 | 2 — Exit codes (`CliExitCode`, `Process/SetExitCode.cs`, crash exit code in `Program.Main`) | `02-exit-codes.md` | Medium — changes the process contract every caller sees on a crash | — | 6 |
 | 3 — `--verdict <path>` flag (`ParseVerifyArguments`, `VerifyArgumentsResult.VerdictPath`) | `03-verdict-flag.md` | **High** — public CLI contract (auto-high: public API) | — | 6 |
 | 4 — JSON verdict serializer (`ISerializeVerdict`/`SerializeVerdict`) | `04-verdict-json.md` | **High** — defines the JSON the Stop hook parses (public contract) | 1 | 6 |
@@ -84,12 +84,12 @@ Write sets:
 
 | Phase | Creates | Modifies |
 |---|---|---|
-| 1 | `CodeWorker.Cli/Commands/Verify/Verdict/{VerdictStatus,GateVerdict,Verdict,BuildVerdict}.cs`, `CodeWorker.Cli.Tests/Commands/Verify/Verdict/BuildVerdictTests.cs` | — |
+| 1 | `CodeWorker.Cli/Commands/Verify/Verdicts/{VerdictStatus,GateVerdict,Verdict,BuildVerdict}.cs`, `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/BuildVerdictTests.cs` | — |
 | 2 | `CodeWorker.Cli/CliExitCode.cs`, `CodeWorker.Cli/Process/SetExitCode.cs` | `CodeWorker.Cli/Program.cs` |
 | 3 | — | `CodeWorker.Cli/Commands/Verify/ParseVerifyArguments.cs`, `CodeWorker.Cli/Commands/Verify/VerifyArgumentsResult.cs`, `CodeWorker.Cli.Tests/Commands/Verify/ParseVerifyArgumentsTests.cs` |
-| 4 | `CodeWorker.Cli/Commands/Verify/Verdict/SerializeVerdict.cs`, `CodeWorker.Cli.Tests/Commands/Verify/Verdict/SerializeVerdictTests.cs` | — |
-| 5 | `CodeWorker.Cli/Commands/Verify/Verdict/FormatVerdictReport.cs`, `CodeWorker.Cli.Tests/Commands/Verify/Verdict/FormatVerdictReportTests.cs` | — |
-| 6 | `CodeWorker.Cli/Commands/Verify/Verdict/DeliverVerdict.cs`, its tests, `CodeWorker.Cli.EndToEnd.Tests/VerifyVerdictTests.cs` | `VerifyCommand.cs`, `VerifyCommandTests.cs`, `Harness/TempWorkspace.cs`, `VerifyBannerTests.cs`, `VerifyUsageErrorTests.cs`, `VerifyIntentTests.cs`, `CodeWorker.Cli/README.md` (Usage) |
+| 4 | `CodeWorker.Cli/Commands/Verify/Verdicts/SerializeVerdict.cs`, `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/SerializeVerdictTests.cs` | — |
+| 5 | `CodeWorker.Cli/Commands/Verify/Verdicts/FormatVerdictReport.cs`, `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/FormatVerdictReportTests.cs` | — |
+| 6 | `CodeWorker.Cli/Commands/Verify/Verdicts/DeliverVerdict.cs`, its tests, `CodeWorker.Cli.EndToEnd.Tests/VerifyVerdictTests.cs` | `VerifyCommand.cs`, `VerifyCommandTests.cs`, `Harness/TempWorkspace.cs`, `VerifyBannerTests.cs`, `VerifyUsageErrorTests.cs`, `VerifyIntentTests.cs`, `CodeWorker.Cli/README.md` (Usage) |
 
 **How the split maximizes parallelism.** Exit codes (2) and the CLI flag (3) don't depend on the
 verdict types, so they run beside the model (1) instead of after it. Serialization (4) and the report
@@ -108,7 +108,10 @@ subagents) → integrate → wave 2 (2 parallel) → integrate → wave 3 (1). A
 ### ADR-1 — `Verdict` is its own model, not the raw pipeline result
 **Decision:** `Verdict { VerdictStatus Status; string Message; List<GateVerdict> Gates = [] }`,
 `GateVerdict { string Name; GateStage Stage; GateStatus Status; long DurationMilliseconds; List<GateFinding> Findings = [] }`,
-`VerdictStatus { Green, Blocked, InvalidIntent }` in `Commands/Verify/Verdict/` (ADR-G3).
+`VerdictStatus { Green, Blocked, InvalidIntent }` in `Commands/Verify/Verdicts/` (ADR-G3).
+The folder is plural (`Verdicts`, like `Gates`, `Engines`) because a `Verdict` class inside a `Verdict`
+namespace makes the bare name resolve to the namespace (CS0118) from `…Commands.Verify` and the test
+namespaces — found by Phase 1 during the build (2026-11-17).
 **Context:** The JSON is a contract the `Stop` hook parses; `TimeSpan` would serialize as
 `"00:00:00.0123"`, and `IsBlocked` alone can't express an invalid intent. A dedicated model keeps the
 wire shape stable while `GateResult` evolves.

@@ -9,8 +9,8 @@
 
 ## Touches
 
-- Creates: `CodeWorker.Cli/Commands/Verify/Verdict/VerdictStatus.cs`, `GateVerdict.cs`, `Verdict.cs`,
-  `BuildVerdict.cs`; `CodeWorker.Cli.Tests/Commands/Verify/Verdict/BuildVerdictTests.cs`
+- Creates: `CodeWorker.Cli/Commands/Verify/Verdicts/VerdictStatus.cs`, `GateVerdict.cs`, `Verdict.cs`,
+  `BuildVerdict.cs`; `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/BuildVerdictTests.cs`
 - Modifies: nothing
 - Exclusive runtime resources: none
 
@@ -36,7 +36,7 @@ And `FatCat.CodeWorker.Cli.Commands.Verify.Intent.IntentResult { bool IsValid; I
 
 ## Design (build exactly this shape)
 
-Folder `CodeWorker.Cli/Commands/Verify/Verdict/`, namespace `FatCat.CodeWorker.Cli.Commands.Verify.Verdict`.
+Folder `CodeWorker.Cli/Commands/Verify/Verdicts/`, namespace `FatCat.CodeWorker.Cli.Commands.Verify.Verdicts`.
 
 ```csharp
 public enum VerdictStatus { Green, Blocked, InvalidIntent }
@@ -79,8 +79,8 @@ Keep methods small and named (e.g. `BlockedMessage`, `Location`, `ToGateVerdict`
 
 ## Steps (TDD — tests first, red before green)
 
-`CodeWorker.Cli.Tests/Commands/Verify/Verdict/BuildVerdictTests.cs`, namespace
-`Testing.FatCat.CodeWorker.Cli.Commands.Verify.Verdict`; SUT `new BuildVerdict()` in the constructor.
+`CodeWorker.Cli.Tests/Commands/Verify/Verdicts/BuildVerdictTests.cs`, namespace
+`Testing.FatCat.CodeWorker.Cli.Commands.Verify.Verdicts`; SUT `new BuildVerdict()` in the constructor.
 Build inputs from `Faker.Create<T>()` and pin only the fields each assertion reads. One assertion each:
 
 1. `ReturnGreenWhenThePipelineIsNotBlocked`
@@ -129,5 +129,5 @@ not a default); open questions/risks.
 ## Hand-off
 
 - `Verdict`, `GateVerdict`, `VerdictStatus`; `IBuildVerdict.Build(GatePipelineResult)` and
-  `IBuildVerdict.BuildInvalidIntent(IntentResult)` (namespace `…Commands.Verify.Verdict`).
+  `IBuildVerdict.BuildInvalidIntent(IntentResult)` (namespace `…Commands.Verify.Verdicts`).
 - Phases 4 and 5 consume `Verdict` only; Phase 6 injects `IBuildVerdict` into `VerifyCommand`.

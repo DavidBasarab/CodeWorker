@@ -9,8 +9,8 @@
 
 ## Touches
 
-- Creates: `CodeWorker.Cli/Commands/Verify/Verdict/SerializeVerdict.cs`,
-  `CodeWorker.Cli.Tests/Commands/Verify/Verdict/SerializeVerdictTests.cs`
+- Creates: `CodeWorker.Cli/Commands/Verify/Verdicts/SerializeVerdict.cs`,
+  `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/SerializeVerdictTests.cs`
 - Modifies: nothing
 - Exclusive runtime resources: none
 
@@ -23,7 +23,7 @@ Read `CodeWorker.Cli/README.md`, `CLAUDE.md`, and **all** `.claude/rules/csharp/
 **Worktree base:** before reading code, run `git merge --ff-only <wave base>` (the commit the
 orchestrator names) in your still-clean worktree, then confirm `git rev-parse HEAD` equals it.
 
-Built by Phase 1 (namespace `FatCat.CodeWorker.Cli.Commands.Verify.Verdict`):
+Built by Phase 1 (namespace `FatCat.CodeWorker.Cli.Commands.Verify.Verdicts`):
 `Verdict { VerdictStatus Status; string Message; List<GateVerdict> Gates }`,
 `GateVerdict { string Name; GateStage Stage; GateStatus Status; long DurationMilliseconds; List<GateFinding> Findings }`,
 `VerdictStatus { Green, Blocked, InvalidIntent }`. `GateFinding { string FilePath; int? Line; string Reason }`
@@ -63,7 +63,7 @@ Target shape (overview ADR-5):
 
 ## Steps (TDD — tests first, red before green)
 
-`SerializeVerdictTests` (namespace `Testing.FatCat.CodeWorker.Cli.Commands.Verify.Verdict`), SUT in the
+`SerializeVerdictTests` (namespace `Testing.FatCat.CodeWorker.Cli.Commands.Verify.Verdicts`), SUT in the
 constructor. Assert by parsing the output with `JsonDocument.Parse` and reading one property per test
 (not by comparing whole strings — whitespace is not the contract). One assertion each:
 

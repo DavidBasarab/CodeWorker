@@ -10,8 +10,8 @@
 
 ## Touches
 
-- Creates: `CodeWorker.Cli/Commands/Verify/Verdict/DeliverVerdict.cs`,
-  `CodeWorker.Cli.Tests/Commands/Verify/Verdict/DeliverVerdictTests.cs`,
+- Creates: `CodeWorker.Cli/Commands/Verify/Verdicts/DeliverVerdict.cs`,
+  `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/DeliverVerdictTests.cs`,
   `CodeWorker.Cli.EndToEnd.Tests/VerifyVerdictTests.cs`
 - Modifies: `CodeWorker.Cli/Commands/Verify/VerifyCommand.cs`,
   `CodeWorker.Cli.Tests/Commands/Verify/VerifyCommandTests.cs`,
@@ -28,7 +28,7 @@ Read `CodeWorker.Cli/README.md` ("Usage", "How Claude actually hits it"), `CLAUD
 `.claude/rules/csharp/*.md` first — mandatory.
 
 Current state (Phases 1–5 integrated on the task branch):
-- `Verdict/`: `Verdict`, `GateVerdict`, `VerdictStatus { Green, Blocked, InvalidIntent }`;
+- `Verdicts/`: `Verdict`, `GateVerdict`, `VerdictStatus { Green, Blocked, InvalidIntent }`;
   `IBuildVerdict.Build(GatePipelineResult)` / `BuildInvalidIntent(IntentResult)`;
   `ISerializeVerdict.Serialize(Verdict) → string`; `IFormatVerdictReport.Format(Verdict) → string`
   (first line `Verdict: GREEN|BLOCKED|INVALID INTENT — {message}`).
@@ -49,7 +49,7 @@ Current state (Phases 1–5 integrated on the task branch):
 
 ## Design (build exactly this shape)
 
-**`Verdict/DeliverVerdict.cs`** — interface + class:
+**`Verdicts/DeliverVerdict.cs`** — interface + class:
 ```csharp
 public interface IDeliverVerdict
 {
