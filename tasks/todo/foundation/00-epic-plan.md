@@ -83,7 +83,10 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** given an ordered set of fake gates, the runner runs them cheapest-first,
   stops at the first blocking failure (later gates never run), and returns each gate's structured
   result with timing; an all-pass run returns all results; unit-tested with faked `IVerificationGate`s.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/foundation/gate-pipeline-framework/ -->
+- **Plan:** [`tasks/todo/foundation/gate-pipeline-framework/`](gate-pipeline-framework/00-overview.md)
+  — planned 2026-11-17 (task.md + 00-overview + 3 phases in 2 waves + orchestrator). Gates ordered
+  by a `GateStage` enum; `GateStatus { Passed, Warning, Failed, Skipped }`; per-gate duration via a
+  CLI `IClock`; `verify` runs the pipeline after a valid intent and logs a summary.
 
 ### 4. Verdict model + reporting — `verdict-model-reporting`
 - **Scope:** Aggregate the gate results (item 3) into one **verdict**: a machine-readable JSON
@@ -181,10 +184,29 @@ instances / lifetimes scanning can't infer; otherwise let scanning resolve singl
 **Alternatives rejected:** registering every type explicitly in the module (fights the scanning
 convention; noise); a service-locator pull from `SystemScope` inside the runner (banned — inject
 the gates/engine resolver).
+**Corrected (2026-11-17, while planning item 3):** scanning already registers **every**
+implementation — `SystemScope.BuildContainer` uses `RegisterAssemblyTypes(...).AsImplementedInterfaces()`
+with no single-implementation filter — so `IEnumerable<IVerificationGate>` (and later the engines)
+resolve with **no module registration**. Scan order is not a contract, so ordering lives in code
+(item 3 ADR-2: a `GateStage` enum). The module still registers only what scanning can't build
+(the Serilog instance).
+
+## Item waves
+
+| Wave | Items | State | Why independent |
+|---|---|---|---|
+| 1 | 1 `verify-command-surface` | Built (PR #12) | — |
+| 2 | 2 `intent-contract-model` | Built (PR #13) | — |
+| 3 | 3 `gate-pipeline-framework` | Planned | — |
+| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Not planned | Both depend only on item 3; separate folders (`Verdict/` vs `Engines/`). Shared hotspot to watch: both may touch `VerifyCommand.cs` — the plans must keep that edit in one item, or sequence it |
+
+**Critical path:** 1 → 2 → 3 → 4 (or 5).
 
 ## Ordering rule
 
-Detailed phased plans are written **one item at a time** (Mode B), only when the item is next.
+Detailed phased plans are written **one item wave at a time** (Mode B), only when the wave is next;
+items in the same wave are planned together and built in parallel on separate branches. (Changed
+2026-11-17 from one item at a time — the user wants the wave methodology at every level.)
 Reverting or re-planning a built item never strands a downstream plan, because downstream items
 are not planned until reached. If, after building item 1, the command-surface shape changes the
 design for items 2–5, only item 1's plan exists to reconcile — the rest are still one-liners here,
@@ -192,10 +214,14 @@ edited freely.
 
 ## Next item
 
-**`gate-pipeline-framework`** (item 3) — say **"plan gate pipeline framework"** (or "plan the next
-foundation item") to expand it. Items 1 (`verify-command-surface`) and 2 (`intent-contract-model`)
-are built and merged; their plans are in `tasks/done/foundation/`. Item 3 consumes the intent
-context item 2 produces (`IntentContract` via `IParseIntent`), so plan it against the merged code.
+**Build `gate-pipeline-framework`** (item 3) — it is **planned**; say **"run gate-pipeline-framework"**.
+Items 1 and 2 are built and merged (plans in `tasks/done/foundation/`).
+
+**Then items 4 and 5 together.** `verdict-model-reporting` and `language-engine-seam` both depend
+only on item 3, so once item 3 is merged they form one **item wave**: plan both ("plan verdict model
+reporting" and "plan language engine seam"), then build them in parallel on separate branches. Do
+not plan them before item 3 is built — the one-item-at-a-time rule now means one *wave* of
+independent items at a time.
 
 ## Assumptions & open questions
 
