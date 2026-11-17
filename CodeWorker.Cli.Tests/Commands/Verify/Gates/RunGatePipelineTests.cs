@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Cli.Commands.Verify.Gates;
+using FatCat.CodeWorker.Cli.Time;
 
 namespace Testing.FatCat.CodeWorker.Cli.Commands.Verify.Gates;
 
@@ -8,11 +9,24 @@ public class RunGatePipelineTests
 	private readonly List<string> runOrder = [];
 	private readonly List<GateResult> returnedResults = [];
 	private readonly VerificationContext context = Faker.Create<VerificationContext>();
+	private readonly IClock clock = A.Fake<IClock>();
 	private readonly RunGatePipeline runGatePipeline;
 
 	public RunGatePipelineTests()
 	{
-		runGatePipeline = new RunGatePipeline(gates);
+		A.CallTo(() => clock.UtcNow).Returns(Faker.Create<DateTime>());
+
+		runGatePipeline = new RunGatePipeline(gates, clock);
+	}
+
+	private static TimeSpan RandomElapsedTime()
+	{
+		return TimeSpan.FromMilliseconds(Faker.RandomInt(1, 100_000));
+	}
+
+	private void ClockReads(params DateTime[] times)
+	{
+		A.CallTo(() => clock.UtcNow).ReturnsNextFromSequence(times);
 	}
 
 	private IVerificationGate AddGate(GateStage stage, GateStatus status)
@@ -240,5 +254,74 @@ public class RunGatePipelineTests
 		var result = await runGatePipeline.Run(context);
 
 		result.GateResults[0].Findings.Should().Equal(returnedFindings);
+	}
+
+	[Fact]
+	public async Task StampTheGateDurationOnItsResult()
+	{
+		AddGate(GateStage.Compile, GateStatus.Passed);
+		var start = Faker.Create<DateTime>();
+		var elapsed = RandomElapsedTime();
+
+		ClockReads(start, start + elapsed);
+
+		var result = await runGatePipeline.Run(context);
+
+		result.GateResults[0].Duration.Should().Be(elapsed);
+	}
+
+	[Fact]
+	public async Task TimeEachGateSeparately()
+	{
+		AddGate(GateStage.Compile, GateStatus.Passed);
+		AddGate(GateStage.Test, GateStatus.Passed);
+		var firstStart = Faker.Create<DateTime>();
+		var secondStart = Faker.Create<DateTime>();
+		var secondElapsed = RandomElapsedTime();
+
+		ClockReads(firstStart, firstStart + RandomElapsedTime(), secondStart, secondStart + secondElapsed);
+
+		var result = await runGatePipeline.Run(context);
+
+		result.GateResults[1].Duration.Should().Be(secondElapsed);
+	}
+
+	[Fact]
+	public async Task ReportZeroDurationForASkippedGate()
+	{
+		AddGate(GateStage.Compile, GateStatus.Failed);
+		AddGate(GateStage.Test, GateStatus.Passed);
+		var start = Faker.Create<DateTime>();
+
+		ClockReads(start, start + RandomElapsedTime(), Faker.Create<DateTime>(), Faker.Create<DateTime>());
+
+		var result = await runGatePipeline.Run(context);
+
+		result.GateResults[1].Duration.Should().Be(TimeSpan.Zero);
+	}
+
+	[Fact]
+	public async Task NotReadTheClockForASkippedGate()
+	{
+		AddGate(GateStage.Compile, GateStatus.Failed);
+		AddGate(GateStage.Test, GateStatus.Passed);
+
+		await runGatePipeline.Run(context);
+
+		A.CallTo(() => clock.UtcNow).MustHaveHappenedTwiceExactly();
+	}
+
+	[Fact]
+	public async Task TimeAFailingGate()
+	{
+		AddGate(GateStage.Compile, GateStatus.Failed);
+		var start = Faker.Create<DateTime>();
+		var elapsed = RandomElapsedTime();
+
+		ClockReads(start, start + elapsed);
+
+		var result = await runGatePipeline.Run(context);
+
+		result.GateResults[0].Duration.Should().Be(elapsed);
 	}
 }

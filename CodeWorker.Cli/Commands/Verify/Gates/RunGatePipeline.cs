@@ -1,3 +1,5 @@
+using FatCat.CodeWorker.Cli.Time;
+
 namespace FatCat.CodeWorker.Cli.Commands.Verify.Gates;
 
 public interface IRunGatePipeline
@@ -5,7 +7,7 @@ public interface IRunGatePipeline
 	Task<GatePipelineResult> Run(VerificationContext context);
 }
 
-public class RunGatePipeline(IEnumerable<IVerificationGate> gates) : IRunGatePipeline
+public class RunGatePipeline(IEnumerable<IVerificationGate> gates, IClock clock) : IRunGatePipeline
 {
 	public async Task<GatePipelineResult> Run(VerificationContext context)
 	{
@@ -31,12 +33,15 @@ public class RunGatePipeline(IEnumerable<IVerificationGate> gates) : IRunGatePip
 		return gateResults.Any(gateResult => gateResult.Status == GateStatus.Failed);
 	}
 
-	private static async Task<GateResult> RunGate(IVerificationGate gate, VerificationContext context)
+	private async Task<GateResult> RunGate(IVerificationGate gate, VerificationContext context)
 	{
+		var startedAt = clock.UtcNow;
 		var gateResult = await gate.Run(context);
+		var finishedAt = clock.UtcNow;
 
 		gateResult.GateName = gate.Name;
 		gateResult.Stage = gate.Stage;
+		gateResult.Duration = finishedAt - startedAt;
 
 		return gateResult;
 	}
