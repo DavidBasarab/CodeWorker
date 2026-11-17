@@ -1,7 +1,7 @@
 # verdict-model-reporting — Overview
 
 - **Work item:** `verdict-model-reporting` (Foundation item 4 — see
-  [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md))
+  [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md))
 - **Source of truth:** `CodeWorker.Cli/README.md` ("Usage", "How Claude actually hits it")
 - **Generated:** 2026-11-17-142201
 - **Item wave:** 4 — built in parallel with `language-engine-seam` (disjoint files; see the epic plan)

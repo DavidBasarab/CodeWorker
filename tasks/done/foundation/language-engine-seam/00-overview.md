@@ -1,7 +1,7 @@
 # language-engine-seam — Overview
 
 - **Work item:** `language-engine-seam` (Foundation item 5 — see
-  [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md))
+  [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md))
 - **Source of truth:** `CodeWorker.Cli/README.md` ("The engine runs in-process", "C#-first,
   language-agnostic by design")
 - **Generated:** 2026-11-17-142201

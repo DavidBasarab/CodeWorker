@@ -63,9 +63,9 @@ item 4 (`verdict-model-reporting`) — `verify` still exits 0 here.
 
 ## Feature Context
 
-- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md) — item 3, ADR-G2..G5.
-- Previous items (built): [`verify-command-surface`](../../../done/foundation/verify-command-surface/00-overview.md),
-  [`intent-contract-model`](../../../done/foundation/intent-contract-model/00-overview.md).
+- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md) — item 3, ADR-G2..G5.
+- Previous items (built): [`verify-command-surface`](../verify-command-surface/00-overview.md),
+  [`intent-contract-model`](../intent-contract-model/00-overview.md).
 - Source of truth: [`CodeWorker.Cli/README.md`](../../../../CodeWorker.Cli/README.md) — "How It Works".
 - DI scanning: `C:\Code\FatCat.Toolkit\src\ToolKit\Injection\SystemScope.cs` (`BuildContainer`).
 - Clock pattern to mirror: `CodeWorker/Claude/IClock.cs` (main project).

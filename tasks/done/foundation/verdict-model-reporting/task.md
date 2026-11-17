@@ -62,7 +62,7 @@ Exit codes (distinct, so the hook can tell a red gate from a broken invocation):
 
 ## Feature Context
 
-- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md) — item 4, ADR-G2..G5.
+- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md) — item 4, ADR-G2..G5.
 - Built on: [`gate-pipeline-framework`](../gate-pipeline-framework/00-overview.md) (item 3) —
   `GatePipelineResult`, `GateResult`, `GateFinding`, `GateStage`, `GateStatus`.
 - Source of truth: [`CodeWorker.Cli/README.md`](../../../../CodeWorker.Cli/README.md) — "Usage",

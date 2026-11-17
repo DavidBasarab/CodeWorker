@@ -1,7 +1,7 @@
 # gate-pipeline-framework — Overview
 
 - **Work item:** `gate-pipeline-framework` (Foundation item 3 — see
-  [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md))
+  [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md))
 - **Source of truth:** `CodeWorker.Cli/README.md` ("How It Works")
 - **Generated:** 2026-11-17-131956
 

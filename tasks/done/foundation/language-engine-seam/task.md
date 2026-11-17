@@ -43,7 +43,7 @@ gate, resolver or module change.
 
 ## Feature Context
 
-- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md) — item 5, ADR-G1/G5.
+- Epic plan: [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md) — item 5, ADR-G1/G5.
 - Built on: [`gate-pipeline-framework`](../gate-pipeline-framework/00-overview.md) (item 3) — the
   multi-implementation scanning pattern (`IEnumerable<IVerificationGate>`) this seam reuses.
 - Built alongside: [`verdict-model-reporting`](../verdict-model-reporting/00-overview.md) (item 4) —
