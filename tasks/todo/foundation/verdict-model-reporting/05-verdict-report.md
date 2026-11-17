@@ -9,8 +9,8 @@
 
 ## Touches
 
-- Creates: `CodeWorker.Cli/Commands/Verify/Verdict/FormatVerdictReport.cs`,
-  `CodeWorker.Cli.Tests/Commands/Verify/Verdict/FormatVerdictReportTests.cs`
+- Creates: `CodeWorker.Cli/Commands/Verify/Verdicts/FormatVerdictReport.cs`,
+  `CodeWorker.Cli.Tests/Commands/Verify/Verdicts/FormatVerdictReportTests.cs`
 - Modifies: nothing
 - Exclusive runtime resources: none
 
@@ -25,7 +25,7 @@ work the next morning"), `CLAUDE.md`, and **all** `.claude/rules/csharp/*.md` fi
 **Worktree base:** before reading code, run `git merge --ff-only <wave base>` (the commit the
 orchestrator names) in your still-clean worktree, then confirm `git rev-parse HEAD` equals it.
 
-Built by Phase 1 (namespace `FatCat.CodeWorker.Cli.Commands.Verify.Verdict`):
+Built by Phase 1 (namespace `FatCat.CodeWorker.Cli.Commands.Verify.Verdicts`):
 `Verdict { VerdictStatus Status; string Message; List<GateVerdict> Gates }`,
 `GateVerdict { string Name; GateStage Stage; GateStatus Status; long DurationMilliseconds; List<GateFinding> Findings }`,
 `VerdictStatus { Green, Blocked, InvalidIntent }`; `GateFinding { FilePath; int? Line; Reason }` in `…Gates`.
@@ -58,7 +58,7 @@ Verdict: BLOCKED — Compile failed: CS1002 ; expected (Foo.cs:12)
 
 ## Steps (TDD — tests first, red before green)
 
-`FormatVerdictReportTests` (namespace `Testing.FatCat.CodeWorker.Cli.Commands.Verify.Verdict`), SUT in
+`FormatVerdictReportTests` (namespace `Testing.FatCat.CodeWorker.Cli.Commands.Verify.Verdicts`), SUT in
 the constructor; split the output on `Environment.NewLine` to assert a specific line. One assertion each:
 
 1. `StartWithTheGreenStatusAndMessage`

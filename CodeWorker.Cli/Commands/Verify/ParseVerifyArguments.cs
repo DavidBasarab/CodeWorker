@@ -12,7 +12,9 @@ public class ParseVerifyArguments(IFileSystemTools fileSystemTools) : IParseVeri
 	private const string IntentFlag = "--intent";
 	private const string ProductionFlag = "--production";
 	private const string TestsFlag = "--tests";
-	private const string UsageLine = "Usage: verify --intent <intent.json> --production <Foo.cs> --tests <FooTests.cs>";
+	private const string VerdictFlag = "--verdict";
+	private const string UsageLine =
+		"Usage: verify --intent <intent.json> --production <Foo.cs> --tests <FooTests.cs> [--verdict <verdict.json>]";
 
 	public VerifyArgumentsResult Parse(string[] args)
 	{
@@ -54,6 +56,8 @@ public class ParseVerifyArguments(IFileSystemTools fileSystemTools) : IParseVeri
 			return Failure(VerifyUsageError.TestsFileNotFound, $"Tests file not found: {testsPath}. {UsageLine}");
 		}
 
+		_ = TryGetFlagValue(args, VerdictFlag, out var verdictPath);
+
 		return new VerifyArgumentsResult
 		{
 			IsValid = true,
@@ -62,6 +66,7 @@ public class ParseVerifyArguments(IFileSystemTools fileSystemTools) : IParseVeri
 			IntentPath = intentPath,
 			ProductionPath = productionPath,
 			TestsPath = testsPath,
+			VerdictPath = verdictPath,
 		};
 	}
 

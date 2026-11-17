@@ -156,9 +156,9 @@ contract wants a value).
 ### ADR-G3 — Verify types live under `Commands/Verify/`, namespace mirrors folder
 **Decision:** All Foundation types live under `CodeWorker.Cli/Commands/Verify/` with sub-folders
 per concern: the command in `Commands/Verify/`, the intent model in `Commands/Verify/Intent/`, the
-pipeline in `Commands/Verify/Gates/`, the verdict in `Commands/Verify/Verdict/`, the engine seam in
+pipeline in `Commands/Verify/Gates/`, the verdict in `Commands/Verify/Verdicts/`, the engine seam in
 `Commands/Verify/Engines/`. Namespaces match folder paths exactly
-(`FatCat.CodeWorker.Cli.Commands.Verify`, `…Verify.Intent`, `…Verify.Gates`, `…Verify.Verdict`,
+(`FatCat.CodeWorker.Cli.Commands.Verify`, `…Verify.Intent`, `…Verify.Gates`, `…Verify.Verdicts`,
 `…Verify.Engines`). Tests mirror in `CodeWorker.Cli.Tests` with the `Testing.` prefix.
 **Context:** `naming-and-structure.md` — one sub-folder per feature under `Commands/`, namespace
 matches folder, test project mirrors source. This is the main project's own layout
@@ -202,7 +202,7 @@ resolve with **no module registration**. Scan order is not a contract, so orderi
 | 1 | 1 `verify-command-surface` | Built (PR #12) | — |
 | 2 | 2 `intent-contract-model` | Built (PR #13) | — |
 | 3 | 3 `gate-pipeline-framework` | Built (PR #16, open) | — |
-| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Planned | Both depend only on item 3; separate folders (`Verdict/` vs `Engines/`). The `VerifyCommand.cs` hotspot is kept in item 4 only — item 5 adds no caller (its ADR-4) |
+| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Planned | Both depend only on item 3; separate folders (`Verdicts/` vs `Engines/`). The `VerifyCommand.cs` hotspot is kept in item 4 only — item 5 adds no caller (its ADR-4) |
 
 **Critical path:** 1 → 2 → 3 → 4 (or 5).
 

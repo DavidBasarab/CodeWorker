@@ -26,6 +26,8 @@ public static class Program
 		catch (Exception ex)
 		{
 			ConsoleLog.WriteException(ex);
+
+			Environment.ExitCode = (int)CliExitCode.UnexpectedError;
 		}
 		finally
 		{

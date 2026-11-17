@@ -192,4 +192,87 @@ public class ParseVerifyArgumentsTests
 
 		result.Error.Should().Be(VerifyUsageError.MissingIntentFlag);
 	}
+
+	[Fact]
+	public void ReturnTheVerdictPathWhenGiven()
+	{
+		var result = parseVerifyArguments.Parse([.. WellFormedArgs(), "--verdict", "verdict.json"]);
+
+		result.VerdictPath.Should().Be("verdict.json");
+	}
+
+	[Fact]
+	public void ReturnNoVerdictPathWhenAbsent()
+	{
+		var result = parseVerifyArguments.Parse(WellFormedArgs());
+
+		result.VerdictPath.Should().BeNull();
+	}
+
+	[Fact]
+	public void ReturnNoVerdictPathWhenItHasNoValue()
+	{
+		var result = parseVerifyArguments.Parse([.. WellFormedArgs(), "--verdict"]);
+
+		result.VerdictPath.Should().BeNull();
+	}
+
+	[Fact]
+	public void ReturnNoVerdictPathWhenItIsFollowedByAnotherFlag()
+	{
+		var result = parseVerifyArguments.Parse([
+			"verify",
+			"--verdict",
+			"--intent",
+			"intent.json",
+			"--production",
+			"Foo.cs",
+			"--tests",
+			"FooTests.cs",
+		]);
+
+		result.VerdictPath.Should().BeNull();
+	}
+
+	[Fact]
+	public void StayValidWithAVerdictFlag()
+	{
+		var result = parseVerifyArguments.Parse([.. WellFormedArgs(), "--verdict", "verdict.json"]);
+
+		result.IsValid.Should().BeTrue();
+	}
+
+	[Fact]
+	public void NotCheckThatTheVerdictFileExists()
+	{
+		parseVerifyArguments.Parse([.. WellFormedArgs(), "--verdict", "verdict.json"]);
+
+		A.CallTo(() => fileSystemTools.FileExists("verdict.json")).MustNotHaveHappened();
+	}
+
+	[Fact]
+	public void AcceptTheVerdictFlagBeforeTheOtherFlags()
+	{
+		var result = parseVerifyArguments.Parse([
+			"verify",
+			"--verdict",
+			"verdict.json",
+			"--intent",
+			"intent.json",
+			"--production",
+			"Foo.cs",
+			"--tests",
+			"FooTests.cs",
+		]);
+
+		result.VerdictPath.Should().Be("verdict.json");
+	}
+
+	[Fact]
+	public void MentionTheVerdictFlagInTheUsage()
+	{
+		var result = parseVerifyArguments.Parse(["verify"]);
+
+		result.Message.Should().Contain("[--verdict <verdict.json>]");
+	}
 }

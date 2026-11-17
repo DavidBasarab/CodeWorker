@@ -164,16 +164,22 @@ cost. A brand-new class diffs as fully new, so nothing is ever under-tested.
 Run manually (or from CI) against one class:
 
 ```bash
-verify --intent intent.json --production Foo.cs --tests FooTests.cs
+verify --intent intent.json --production Foo.cs --tests FooTests.cs [--verdict verdict.json]
 ```
 
-- **Exit code 0** — green verdict, the AI proceeds.
-- **Non-zero exit** — a gate failed. The verdict names the gate, the location, and the reason. The AI
-  fixes and re-runs.
+Exit codes (distinct, so the hook can tell a red gate from a broken invocation):
+
+| Code | Meaning |
+|---|---|
+| 0 | Green — every gate that ran passed or warned |
+| 1 | Blocked — a gate failed |
+| 2 | Invalid input — usage error or invalid intent |
+| 3 | Unexpected error — an exception reached `Program.Main` |
 
 The `verify` command emits **two outputs**:
 
-- a **machine-readable JSON verdict** the Claude Code hook feeds back to the AI, and
+- a **machine-readable JSON verdict** the Claude Code hook feeds back to the AI, written to the
+  `--verdict` file (a usage error writes no verdict file), and
 - a **human-readable report** for the person reviewing the work the next morning.
 
 ### How Claude actually hits it — a `Stop` hook

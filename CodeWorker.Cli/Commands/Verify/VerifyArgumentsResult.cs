@@ -13,4 +13,6 @@ public class VerifyArgumentsResult
 	public string ProductionPath { get; set; }
 
 	public string TestsPath { get; set; }
+
+	public string VerdictPath { get; set; }
 }
