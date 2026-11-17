@@ -66,10 +66,11 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** a valid intent JSON produces a populated intent-context object with all
   behaviors; each invalid payload class returns a distinct validation error value naming what is
   wrong; round-trips are unit-tested against sample intent JSON.
-- **Plan:** [`tasks/todo/foundation/intent-contract-model/`](intent-contract-model/00-overview.md)
+- **Plan:** [`tasks/done/foundation/intent-contract-model/`](../../done/foundation/intent-contract-model/00-overview.md)
   — planned 2026-10-14 (task.md + 00-overview + 3 phases + orchestrator). User decisions: observable
   phrasing enforced by a leading-verb allow-list; the intent `class` must match the production file
-  name.
+  name. **Built and merged 2026-10-14 (PR #13)**; phase 2 was re-run once after the plan was amended
+  for the toolkit's `ReadAllText` returning `""` on a missing file (see its `failure-report.md`).
 
 ### 3. Gate pipeline framework — `gate-pipeline-framework`
 - **Scope:** The `IVerificationGate` abstraction and the **fail-fast runner** (README "How It
@@ -192,10 +193,9 @@ edited freely.
 ## Next item
 
 **`gate-pipeline-framework`** (item 3) — say **"plan gate pipeline framework"** (or "plan the next
-foundation item") to expand it. Item 1 (`verify-command-surface`) is built and merged. Item 2
-(`intent-contract-model`) is **planned** (see its folder) and ready to build via
-**"run intent-contract-model"**; build it before planning item 3 so any intent-model shape change
-can be reconciled first (the one-at-a-time rule).
+foundation item") to expand it. Items 1 (`verify-command-surface`) and 2 (`intent-contract-model`)
+are built and merged; their plans are in `tasks/done/foundation/`. Item 3 consumes the intent
+context item 2 produces (`IntentContract` via `IParseIntent`), so plan it against the merged code.
 
 ## Assumptions & open questions
 
@@ -210,7 +210,7 @@ can be reconciled first (the one-at-a-time rule).
   into the `Engine` group and have item 5 register nothing concrete.
 - **[Resolved 2026-10-14] Intent schema field names.** Pinned by item 2's plan as
   `{ why, class, responsibility, behaviors[] of { behavior, test? } }`, unknown properties rejected
-  (see `intent-contract-model/00-overview.md` ADR-1/ADR-5).
+  (see `tasks/done/foundation/intent-contract-model/00-overview.md` ADR-1/ADR-5).
 - **Verdict JSON shape** (the `Stop`-hook contract) is defined in item 4; the hook-wiring epic
   (Integration group) consumes it later. Item 4 owns the field names; pin them there.
 - **Sub-10s budget does not bite in Foundation.** The spine has no Roslyn/LLM work; the budget

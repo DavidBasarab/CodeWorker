@@ -1,7 +1,7 @@
 # intent-contract-model — Overview
 
 - **Work item:** `intent-contract-model` (Foundation item 2 — see
-  [`tasks/todo/foundation/00-epic-plan.md`](../00-epic-plan.md))
+  [`tasks/todo/foundation/00-epic-plan.md`](../../../todo/foundation/00-epic-plan.md))
 - **Source of truth:** `CodeWorker.Cli/README.md` ("The Intent Contract")
 - **Generated:** 2026-10-14-125623
 
