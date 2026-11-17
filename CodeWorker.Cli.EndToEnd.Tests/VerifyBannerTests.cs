@@ -17,10 +17,10 @@ public class VerifyBannerTests(PublishedCli publishedCli)
 	}
 
 	[Fact]
-	public async Task ExitZeroWithNoArguments()
+	public async Task ExitTwoWithNoArguments()
 	{
 		var result = await runner.Run(publishedCli.ExecutablePath);
 
-		result.ExitCode.Should().Be(0);
+		result.ExitCode.Should().Be(2);
 	}
 }

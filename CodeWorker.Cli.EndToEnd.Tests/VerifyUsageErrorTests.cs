@@ -101,11 +101,11 @@ public class VerifyUsageErrorTests(PublishedCli publishedCli)
 	}
 
 	[Fact]
-	public async Task ExitZeroOnAUsageError()
+	public async Task ExitTwoOnAUsageError()
 	{
 		var result = await Run("verify", "--production", "p", "--tests", "t");
 
-		result.ExitCode.Should().Be(0);
+		result.ExitCode.Should().Be(2);
 	}
 
 	private async Task<CliResult> Run(params string[] args)

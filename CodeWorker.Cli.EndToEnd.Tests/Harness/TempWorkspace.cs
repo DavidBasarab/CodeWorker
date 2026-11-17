@@ -27,6 +27,7 @@ public class TempWorkspace : IDisposable
 		IntentPath = WriteFile("intent.json", ValidIntent);
 		ProductionPath = WriteFile("Foo.cs", "public class Foo { }");
 		TestsPath = WriteFile("FooTests.cs", "public class FooTests { }");
+		VerdictPath = Path.Combine(root, "verdict.json");
 	}
 
 	public string IntentPath { get; }
@@ -34,6 +35,8 @@ public class TempWorkspace : IDisposable
 	public string ProductionPath { get; }
 
 	public string TestsPath { get; }
+
+	public string VerdictPath { get; }
 
 	public void WriteIntent(string content)
 	{

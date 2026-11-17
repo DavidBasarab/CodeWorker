@@ -57,7 +57,7 @@ public class VerifyIntentTests(PublishedCli publishedCli)
 	}
 
 	[Fact]
-	public async Task ExitZeroForAnInvalidIntent()
+	public async Task ExitTwoForAnInvalidIntent()
 	{
 		using var workspace = new TempWorkspace();
 
@@ -65,7 +65,7 @@ public class VerifyIntentTests(PublishedCli publishedCli)
 
 		var result = await RunVerify(workspace);
 
-		result.ExitCode.Should().Be(0);
+		result.ExitCode.Should().Be(2);
 	}
 
 	private static string IntentFor(string className, string behavior)

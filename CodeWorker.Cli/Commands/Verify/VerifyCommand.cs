@@ -1,6 +1,8 @@
 using FatCat.CodeWorker.Cli.Commands;
 using FatCat.CodeWorker.Cli.Commands.Verify.Gates;
 using FatCat.CodeWorker.Cli.Commands.Verify.Intent;
+using FatCat.CodeWorker.Cli.Commands.Verify.Verdicts;
+using FatCat.CodeWorker.Cli.Process;
 using Serilog;
 
 namespace FatCat.CodeWorker.Cli.Commands.Verify;
@@ -11,6 +13,9 @@ public class VerifyCommand(
 	IParseVerifyArguments parseVerifyArguments,
 	IParseIntent parseIntent,
 	IRunGatePipeline runGatePipeline,
+	IBuildVerdict buildVerdict,
+	IDeliverVerdict deliverVerdict,
+	ISetExitCode setExitCode,
 	ILogger logger
 ) : IRunVerifyCommand
 {
@@ -20,7 +25,7 @@ public class VerifyCommand(
 
 		if (!arguments.IsValid)
 		{
-			logger.Error("verify: {Reason}", arguments.Message);
+			RejectInvalidArguments(arguments);
 
 			return;
 		}
@@ -31,7 +36,7 @@ public class VerifyCommand(
 
 		if (!intentResult.IsValid)
 		{
-			logger.Error("verify: {Reason}", intentResult.Message);
+			await DeliverInvalidIntent(intentResult, arguments.VerdictPath);
 
 			return;
 		}
@@ -43,6 +48,22 @@ public class VerifyCommand(
 		var pipelineResult = await runGatePipeline.Run(context);
 
 		LogPipelineSummary(pipelineResult);
+
+		await deliverVerdict.Deliver(buildVerdict.Build(pipelineResult), arguments.VerdictPath);
+	}
+
+	private void RejectInvalidArguments(VerifyArgumentsResult arguments)
+	{
+		logger.Error("verify: {Reason}", arguments.Message);
+
+		setExitCode.Set(CliExitCode.InvalidInput);
+	}
+
+	private async Task DeliverInvalidIntent(IntentResult intentResult, string verdictPath)
+	{
+		logger.Error("verify: {Reason}", intentResult.Message);
+
+		await deliverVerdict.Deliver(buildVerdict.BuildInvalidIntent(intentResult), verdictPath);
 	}
 
 	private static VerificationContext BuildContext(VerifyArgumentsResult arguments, IntentContract intent)
