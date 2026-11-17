@@ -49,7 +49,7 @@ public class VerifyCommand(IParseVerifyArguments parseVerifyArguments, ILogger l
 - `CodeWorker.Cli.Tests/Commands/Verify/VerifyCommandTests.cs` — fakes `IParseVerifyArguments` with a
   `currentResult` field + `ReturnsLazily`; tests `ParseTheArguments`, `LogTheUsageErrorWhenInvalid`,
   `NotLogAnErrorWhenValid`, `CompleteWhenValid`. Constructor builds `new VerifyCommand(parseVerifyArguments, logger)`.
-- **E2E** (`CodeWorker.Cli.EndToEnd.Tests`, run by `dotnet test CodeWorker.sln`; publishes the CLI
+- **E2E** (`CodeWorker.Cli.EndToEnd.Tests`, run by `dotnet test CodeWorker.slnx`; publishes the CLI
   once per run): `Harness/TempWorkspace.cs` writes `intent.json` = `{ "class": "Foo" }`, `Foo.cs`,
   `FooTests.cs` into a temp folder. `VerifyValidInvocationTests` asserts stdout contains
   `"verify: parsed intent"` and the intent path, exit 0. `VerifyUsageErrorTests` asserts usage
@@ -164,10 +164,10 @@ malformed intent it prints the malformed-intent error.
 ## Definition of Done (all mandatory)
 
 - [ ] Tests written before implementation (red observed before green)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln` — all tests pass, **including the E2E suite** (existing
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx` — all tests pass, **including the E2E suite** (existing
       `VerifyValidInvocationTests` / `VerifyUsageErrorTests` / `VerifyBannerTests` unchanged and green)
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; then
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; then
       `dotnet build` again so CSharpier applies
 - [ ] Namespaces match folders; constructor injection only; async all the way (no
       `Task.CompletedTask` left behind in an `async` method, no blocking); no banned patterns

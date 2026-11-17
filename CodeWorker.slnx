@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="CodeWorker.Cli.EndToEnd.Tests/CodeWorker.Cli.EndToEnd.Tests.csproj" />
+  <Project Path="CodeWorker.Cli.Tests/CodeWorker.Cli.Tests.csproj" />
+  <Project Path="CodeWorker.Cli/CodeWorker.Cli.csproj" />
+  <Project Path="CodeWorker.Tests/CodeWorker.Tests.csproj" />
+  <Project Path="CodeWorker/CodeWorker.csproj" />
+</Solution>

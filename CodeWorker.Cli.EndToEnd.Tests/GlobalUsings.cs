@@ -1,3 +1,3 @@
 global using System.Threading.Tasks;
-global using FluentAssertions;
+global using FatCat.Testing;
 global using Xunit;

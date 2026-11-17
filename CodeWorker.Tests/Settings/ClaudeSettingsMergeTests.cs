@@ -194,7 +194,7 @@ public class ClaudeSettingsMergeTests
 
 		var result = globalSettings.MergeWith(repoSettings);
 
-		result.Should().NotBeSameAs(globalSettings);
+		result.Should().Not.BeSameAs(globalSettings);
 		globalSettings.Model.Should().Be("claude-opus-4-6");
 	}
 

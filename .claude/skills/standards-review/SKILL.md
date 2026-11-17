@@ -49,7 +49,7 @@ Go file by file. For every file, check it against every applicable rule. Pay spe
 - No `.Result`/`.Wait()`, `async void`, `ConfigureAwait(false)` in production code; use `IThread` for threading/sleep where it is the established abstraction.
 - Collection expressions (`[]`) not `new List<T>()`; switch expressions with a discard arm over if/else chains.
 - **String interpolation, never `+` concatenation.** Require `$"Some string with data {theData}"`; flag any `"..." + value`. No analyzer catches this — it is a review-only rule, so check it carefully.
-- TDD: production class has a matching `<Class>Tests` test class in the mirrored test project; tests follow the xUnit + FakeItEasy + FluentAssertions stack, one assertion per test, verb-first names.
+- TDD: production class has a matching `<Class>Tests` test class in the mirrored test project; tests follow the xUnit + FakeItEasy + FatCat.Testing stack, one assertion per test, verb-first names.
 
 ### TypeScript / React — emphasized checks
 - No `any`, no `@ts-ignore`/`@ts-expect-error`, no `as` casts to dodge type errors, no `!` non-null assertions.

@@ -110,11 +110,13 @@ public class VerifyCommandTests
 	}
 
 	[Fact]
-	public async Task CompleteWhenValid()
+	public void CompleteWhenValid()
 	{
 		currentResult = ValidResult();
 
-		await FluentActions.Awaiting(() => verifyCommand.Execute(Faker.Create<string[]>())).Should().NotThrowAsync();
+		Func<Task> act = () => verifyCommand.Execute(Faker.Create<string[]>());
+
+		act.Should().NotThrowAsync();
 	}
 
 	[Fact]

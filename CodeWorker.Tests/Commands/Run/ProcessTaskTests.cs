@@ -216,27 +216,27 @@ public class ProcessTaskTests
 	}
 
 	[Fact]
-	public async Task RethrowExceptionsFromMoveTask()
+	public void RethrowExceptionsFromMoveTask()
 	{
 		var expectedException = new InvalidOperationException("move failed");
 
 		A.CallTo(() => moveTask.Move(A<string>._, A<string>._)).Throws(expectedException);
 
-		var act = async () => await processTask.Run(context, taskFile);
+		Func<Task> act = async () => await processTask.Run(context, taskFile);
 
-		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("move failed");
+		act.Should().ThrowAsync<InvalidOperationException>().WithMessage("move failed");
 	}
 
 	[Fact]
-	public async Task LogErrorWhenExceptionIsThrown()
+	public void LogErrorWhenExceptionIsThrown()
 	{
 		var expectedException = new InvalidOperationException("move failed");
 
 		A.CallTo(() => moveTask.Move(A<string>._, A<string>._)).Throws(expectedException);
 
-		var act = async () => await processTask.Run(context, taskFile);
+		Func<Task> act = async () => await processTask.Run(context, taskFile);
 
-		await act.Should().ThrowAsync<InvalidOperationException>();
+		act.Should().ThrowAsync<InvalidOperationException>();
 
 		A.CallTo(() =>
 				logger.Error(
@@ -249,39 +249,39 @@ public class ProcessTaskTests
 	}
 
 	[Fact]
-	public async Task RethrowExceptionsFromRunClaude()
+	public void RethrowExceptionsFromRunClaude()
 	{
 		var expectedException = new InvalidOperationException("claude failed");
 
 		A.CallTo(() => runClaude.Run(A<string>._, A<ClaudeSettings>._, A<List<ReferenceFile>>._)).Throws(expectedException);
 
-		var act = async () => await processTask.Run(context, taskFile);
+		Func<Task> act = async () => await processTask.Run(context, taskFile);
 
-		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("claude failed");
+		act.Should().ThrowAsync<InvalidOperationException>().WithMessage("claude failed");
 	}
 
 	[Fact]
-	public async Task RethrowExceptionsFromClassifyTaskResult()
+	public void RethrowExceptionsFromClassifyTaskResult()
 	{
 		var expectedException = new InvalidOperationException("classify failed");
 
 		A.CallTo(() => classifyTaskResult.Classify(A<ProcessResult>._)).Throws(expectedException);
 
-		var act = async () => await processTask.Run(context, taskFile);
+		Func<Task> act = async () => await processTask.Run(context, taskFile);
 
-		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("classify failed");
+		act.Should().ThrowAsync<InvalidOperationException>().WithMessage("classify failed");
 	}
 
 	[Fact]
-	public async Task RethrowExceptionsFromOutcomeHandler()
+	public void RethrowExceptionsFromOutcomeHandler()
 	{
 		var expectedException = new InvalidOperationException("handler failed");
 
 		A.CallTo(() => outcomeHandler.Handle(A<TaskExecutionContext>._, A<TaskExecution>._)).Throws(expectedException);
 
-		var act = async () => await processTask.Run(context, taskFile);
+		Func<Task> act = async () => await processTask.Run(context, taskFile);
 
-		await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("handler failed");
+		act.Should().ThrowAsync<InvalidOperationException>().WithMessage("handler failed");
 	}
 
 	[Fact]

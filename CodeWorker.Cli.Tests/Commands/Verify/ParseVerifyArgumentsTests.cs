@@ -180,7 +180,7 @@ public class ParseVerifyArgumentsTests
 	{
 		var result = parseVerifyArguments.Parse(["verify", "--production", "Foo.cs", "--tests", "FooTests.cs"]);
 
-		result.Message.Should().NotBeNullOrEmpty();
+		result.Message.Should().Not.BeNullOrEmpty();
 	}
 
 	[Fact]

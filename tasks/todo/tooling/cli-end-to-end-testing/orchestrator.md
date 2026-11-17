@@ -17,7 +17,7 @@ complete instruction set. This runbook **drives** the phases; it never writes th
 - Never push to any remote; never amend, squash, rebase, or force-push — human review gates the push.
 - Work happens on the **current branch** (expected: `CliTester`). If the current branch is `main`,
   stop and ask the user first.
-- **Preconditions:** a restored solution and the .NET 10 SDK on PATH (the publish fixture shells out to
+- **Preconditions:** a restored solution and the .NET 11 SDK on PATH (the publish fixture shells out to
   `dotnet publish`). No MongoDB, no network, no external services — the whole item is local test code.
 
 ## Phases (dependency order)
@@ -47,8 +47,8 @@ complete instruction set. This runbook **drives** the phases; it never writes th
    - `git status --porcelain` is empty
    - The new commit's message references the phase file
    - The subagent did not report PHASE FAILED
-   - `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` is green
-   - `dotnet test CodeWorker.sln --filter "Category!=EndToEnd"` is green (the fast unit loop still
+   - `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` is green
+   - `dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"` is green (the fast unit loop still
      passes and did not trigger a publish)
 4. All checks pass → tell the user the phase is done (one line: commit hash + subject) and move to the
    next phase.

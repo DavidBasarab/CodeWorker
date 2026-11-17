@@ -171,7 +171,7 @@ Failing tests first (one assertion each):
 22. `NotValidateWhenTheFileIsUnreadable` — IOException → `Validate` `MustNotHaveHappened`.
 23. `ReturnInvalidWhenTheJsonIsMalformed` — `IsValid` false.
 24. `LetUnexpectedExceptionsPropagate` — `ReadAllText` throws `InvalidOperationException` →
-    `FluentActions.Awaiting(() => parseIntent.Parse(arguments)).Should().ThrowAsync<InvalidOperationException>()`
+    `Func<Task> act = () => parseIntent.Parse(arguments);` then `act.Should().ThrowAsync<InvalidOperationException>()`
     (proves the catch set is narrow — no swallowing).
 
 Implement `ParseIntent` to green. No smoke check — not wired until Phase 3.
@@ -179,9 +179,9 @@ Implement `ParseIntent` to green. No smoke check — not wired until Phase 3.
 ## Definition of Done (all mandatory)
 
 - [ ] Tests written before implementation (red observed before green)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln` — all tests pass
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; then
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx` — all tests pass
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; then
       `dotnet build` again so CSharpier applies
 - [ ] Namespace matches folder; interface + single impl in `ParseIntent.cs`; constructor injection
       only; catch set is exactly `IOException`/`UnauthorizedAccessException`/`JsonException`; no

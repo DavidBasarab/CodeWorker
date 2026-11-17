@@ -61,7 +61,7 @@ public class ClaudeStreamEventTests
 		streamEvent.Subtype.Should().Be("success");
 		streamEvent.IsError.Should().BeFalse();
 		streamEvent.NumTurns.Should().Be(3);
-		streamEvent.DurationMilliseconds.Should().Be(1234.5);
+		streamEvent.DurationMilliseconds.Value.Should().BeApproximately(1234.5, 0);
 		streamEvent.ResultText.Should().Be("all good");
 	}
 

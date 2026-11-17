@@ -89,7 +89,7 @@ public class ClaudeTranscriptTailerTests
 
 		var result = await tailer.Tail(request, tracker);
 
-		result.ResultEvent.Should().NotBeNull();
+		result.ResultEvent.Should().Not.BeNull();
 		result.ResultEvent.Subtype.Should().Be("success");
 	}
 

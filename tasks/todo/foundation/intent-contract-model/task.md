@@ -64,7 +64,7 @@ Grounded in `CodeWorker.Cli/README.md`:
       specific error at `Error`; a valid intent logs the contract's class and behavior count.
 - [ ] Unit-tested against sample intent JSON (round-trip into `IntentContract`) with a faked
       `IFileSystemTools`; the E2E suite covers a valid intent and at least one invalid intent through
-      the published CLI; zero warnings; `dotnet test CodeWorker.sln` green.
+      the published CLI; zero warnings; `dotnet test CodeWorker.slnx` green.
 
 ## Out of Scope / Non-Goals
 

@@ -170,7 +170,7 @@ acceptable refactor — keep each `[Fact]` to its single assertion.
 
 1. Write `VerifyValidInvocationTests` **first**, referencing `TempWorkspace` (not yet created) — red
    (compile failure, then a failing run).
-2. Add `TempWorkspace`. Run `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` — the green-path
+2. Add `TempWorkspace`. Run `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` — the green-path
    tests pass alongside Phase 1's smoke tests.
 3. Sanity: the printed path in the output matches the temp path you passed (proves the real parse ran,
    not a canned string).
@@ -178,10 +178,10 @@ acceptable refactor — keep each `[Fact]` to its single assertion.
 ## Definition of Done (all mandatory)
 
 - [ ] Tests written before `TempWorkspace` (red observed before green)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` — all E2E tests pass (Phase 1 + Phase 2)
-- [ ] `dotnet test CodeWorker.sln --filter "Category!=EndToEnd"` — unit suites still pass, no publish triggered
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; then
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` — all E2E tests pass (Phase 1 + Phase 2)
+- [ ] `dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"` — unit suites still pass, no publish triggered
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; then
       `dotnet build` again so CSharpier applies
 - [ ] Namespaces match folder paths; one class per file; `[ExcludeFromCodeCoverage]` justification on
       `TempWorkspace`; verb-first one-assertion tests; no banned patterns

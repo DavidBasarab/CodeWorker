@@ -35,12 +35,12 @@ single, tagged **`IntentValidationError`** with a human-readable message. Every 
   The main project uses `System.Text.Json` directly (not the toolkit's `IJsonOperations`). Match it.
 - **`CodeWorkerCliModule`** registers only the Serilog `ILogger`; no module change is needed (every
   new interface has one implementation — ADR-G5).
-- **E2E suite** (`CodeWorker.Cli.EndToEnd.Tests`, in `CodeWorker.sln`, runs under `dotnet test`)
+- **E2E suite** (`CodeWorker.Cli.EndToEnd.Tests`, in `CodeWorker.slnx`, runs under `dotnet test`)
   publishes the CLI and drives it as a process. `Harness/TempWorkspace.cs` currently writes the intent
   file as `{ "class": "Foo" }` — **invalid under this item's rules** (no `why`, no behaviors). Phase 3
   must make the workspace write a valid intent, or the green-path E2E would start logging an intent
   error. Existing E2E assertions (`"verify: parsed intent"`, usage errors, exit 0) must stay green.
-- **Test stack** (`CodeWorker.Cli.Tests/GlobalUsings.cs`): xUnit, FakeItEasy, FluentAssertions,
+- **Test stack** (`CodeWorker.Cli.Tests/GlobalUsings.cs`): xUnit, FakeItEasy, FatCat.Testing,
   `FatCat.Fakes`. Tests mirror source folders with the `Testing.` prefix.
 
 ## Acceptance Criteria → Phase Map
@@ -178,7 +178,7 @@ with text matching that the Roslyn engine will supersede).
   `System.Text.Json.Serialization`, `System.Text.RegularExpressions`, and `FatCat.Toolkit` need
   explicit `using`s.
 - **`JsonUnmappedMemberHandling.Disallow`** exists on `JsonSerializerOptions.UnmappedMemberHandling`
-  in .NET 8+ (net10.0 target) and throws `JsonException` on an unknown property.
+  in .NET 8+ (net11.0 target) and throws `JsonException` on an unknown property.
 - **`Faker.Create<string[]>()`** etc. are available as in item 1's tests; tests whose assertions read
   specific fields pin those fields explicitly.
 - **The task branch is the current branch `intent-contract-model`** (not `main`) — do not create a

@@ -182,17 +182,17 @@ An xUnit `[Theory]` + `[MemberData]` over `(args, expectedFragment)` is an accep
 
 1. Write `VerifyUsageErrorTests` and watch each case fail first if you stub the expectations wrong —
    then confirm green against the real published exe:
-   `dotnet test CodeWorker.sln --filter "Category=EndToEnd"`.
+   `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"`.
 2. Cross-check one message against the source (`ParseVerifyArguments`) so the asserted fragment is a
    real substring of the rendered line, prefix and all.
 
 ## Definition of Done (all mandatory)
 
 - [ ] Tests written first (red before green — verify a wrong expected fragment fails, then correct it)
-- [ ] `dotnet build CodeWorker.sln` — zero warnings
-- [ ] `dotnet test CodeWorker.sln --filter "Category=EndToEnd"` — all E2E tests pass (Phases 1–3)
-- [ ] `dotnet test CodeWorker.sln --filter "Category!=EndToEnd"` — unit suites still pass, no publish triggered
-- [ ] `dotnet format style CodeWorker.sln` and `dotnet format analyzers CodeWorker.sln` run; then
+- [ ] `dotnet build CodeWorker.slnx` — zero warnings
+- [ ] `dotnet test CodeWorker.slnx --filter "Category=EndToEnd"` — all E2E tests pass (Phases 1–3)
+- [ ] `dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"` — unit suites still pass, no publish triggered
+- [ ] `dotnet format style CodeWorker.slnx` and `dotnet format analyzers CodeWorker.slnx` run; then
       `dotnet build` again so CSharpier applies
 - [ ] Namespaces match folder paths; one class per file; verb-first one-assertion tests; no banned patterns
 - [ ] Review loop until all three pass clean, restarting from the top after any fix: `unit-test-review`

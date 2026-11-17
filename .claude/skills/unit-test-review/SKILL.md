@@ -73,7 +73,7 @@ A test that cannot fail is worse than a missing test — it certifies nothing.
 
 - Layout: test class name = source class name + `Tests`, one test class per production class, plain xUnit class (no base class), SUT and fakes created in the test class constructor.
 - Naming: verb-first `[Fact]` names (`ReturnOk`, `ExecuteTheCommand`) — no `Should`, no underscores, no Given/When/Then.
-- Assertions: FluentAssertions (`.Should()`, `.Be()`, `.BeEquivalentTo()`).
+- Assertions: FatCat.Testing (`.Should()`, `.Be()`, `.BeEquivalentTo()`; negation as `.Should().Not.Xxx()`).
 - Fakes: `A.Fake<T>()` / `A.CallTo(...)`; matchers are `A<T>._`, never `A<T>.Ignored`; `ReturnsLazily` for values that vary per test.
 - Threading: `FakeThread`, never real delays.
 - Test data: `Faker.Create<T>()`, never hard-coded values.

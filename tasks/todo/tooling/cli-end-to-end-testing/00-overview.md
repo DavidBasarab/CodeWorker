@@ -37,9 +37,9 @@ it as a subprocess**, asserting on the **stdout** and **exit code** a real calle
     `verify --intent …` and bare `--intent …` parse identically.
 - **`CodeWorkerCliModule`** registers a plain synchronous Serilog console logger
   (`WriteTo.Console()`); everything else auto-registers via `SystemScope` scanning.
-- **The CLI project** (`CodeWorker.Cli.csproj`) is `OutputType=Exe`, `net10.0`,
+- **The CLI project** (`CodeWorker.Cli.csproj`) is `OutputType=Exe`, `net11.0`,
   `AssemblyName=FatCatCodeWorkerCli` → published host is **`FatCatCodeWorkerCli.exe`** on Windows.
-- **The test stack** (`CodeWorker.Cli.Tests`): xUnit 2.9.3, FakeItEasy, FluentAssertions, FatCat.Fakes,
+- **The test stack** (`CodeWorker.Cli.Tests`): xUnit 2.9.3, FakeItEasy, FatCat.Testing, FatCat.Fakes,
   `Microsoft.NET.Test.Sdk` 18.3.0, `xunit.runner.visualstudio` 3.1.5, CSharpier.MsBuild. The new E2E
   project mirrors these (minus FakeItEasy — nothing is faked in a black-box test).
 - **The solution** is legacy `.sln` format with four projects; the new project is added the same way
@@ -85,8 +85,8 @@ failure. It never squashes, amends, rebases, or pushes.
 ### ADR-1 — A separate `CodeWorker.Cli.EndToEnd.Tests` project, in the solution, trait-gated
 **Decision:** Create a dedicated `CodeWorker.Cli.EndToEnd.Tests` project (mirroring the existing test
 projects' packages, `RootNamespace = Testing.FatCat.CodeWorker.Cli.EndToEnd`) and add it to
-`CodeWorker.sln`. Every test class carries `[Trait("Category", "EndToEnd")]`. The fast loop runs
-`dotnet test CodeWorker.sln --filter "Category!=EndToEnd"`; the E2E loop runs `--filter "Category=EndToEnd"`.
+`CodeWorker.slnx`. Every test class carries `[Trait("Category", "EndToEnd")]`. The fast loop runs
+`dotnet test CodeWorker.slnx --filter "Category!=EndToEnd"`; the E2E loop runs `--filter "Category=EndToEnd"`.
 **Context:** E2E tests publish and spawn processes — seconds each. Mixed into the one assembly the
 unit tests live in, they would slow every phase's DoD loop and the write-loop the CLI is meant to sit
 in. A separate, filterable project keeps the fast feedback fast (user decision, 2026-09-02).
@@ -98,7 +98,7 @@ faked tests with multi-second process tests; no clean fast/slow split); a projec
 **Decision:** The E2E project does **not** reference `CodeWorker.Cli`. A shared fixture runs
 `dotnet publish CodeWorker.Cli/CodeWorker.Cli.csproj -c Release -o <temp>` once per run and invokes
 `<temp>/FatCatCodeWorkerCli.exe`. The CLI project is located by walking up from `AppContext.BaseDirectory`
-to the directory containing `CodeWorker.sln`.
+to the directory containing `CodeWorker.slnx`.
 **Context:** The whole point is to exercise the CLI the way Claude does — as an installed, published
 executable invoked from a known directory (README: "Configured From the Outside"). A `ProjectReference`
 + in-process `Program.Main` call would test the assembly, not the shipped tool, and would share the
@@ -144,7 +144,7 @@ abstraction for a one-file wrapper; over-engineering per `naming-and-structure.m
 - **The Serilog console sink is synchronous**, so stdout is complete at process exit (verified in
   `CodeWorkerCliModule`). No flush/delay handling is needed unless the sink becomes async later.
 - **Nullable is disabled** and **`ImplicitUsings` is enabled** in the CLI projects; the E2E project
-  follows suit. A `GlobalUsings.cs` covers the test stack (xUnit, FluentAssertions), mirroring
+  follows suit. A `GlobalUsings.cs` covers the test stack (xUnit, FatCat.Testing), mirroring
   `CodeWorker.Cli.Tests`.
 - **Work happens on the current branch `CliTester`** (not `main`), per the commit policy.
 - **CSharpier uses tabs** (`.csharpierrc`) — write readable code and let it format on build.

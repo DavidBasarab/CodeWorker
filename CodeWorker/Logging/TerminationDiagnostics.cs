@@ -68,13 +68,10 @@ public static class TerminationDiagnostics
 	{
 		try
 		{
-			PosixSignalRegistration.Create(
-				signal,
-				context =>
-				{
-					Log.Warning("PosixSignal received Signal={Signal}", context.Signal);
-				}
-			);
+			PosixSignalRegistration.Create(signal, context =>
+			{
+				Log.Warning("PosixSignal received Signal={Signal}", context.Signal);
+			});
 		}
 		catch (PlatformNotSupportedException)
 		{
