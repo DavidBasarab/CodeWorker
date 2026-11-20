@@ -94,8 +94,16 @@ the epics the MVP didn't need._
 
 ## Done
 
-_Completed epics, grouped as they were built. Empty — the CLI is a fresh scaffold
-(`Program` → `CodeWorkerCliApplication` → `IProcessArguments`); no verification epic has shipped yet._
+_Completed epics, grouped as they were built. Each is also checked off in place above; its plans live
+under `tasks/done/`._
+
+### Foundation (the pipeline spine) — [`tasks/done/foundation/`](tasks/done/foundation/)
+
+- [x] **Verify command surface** — [`verify-command-surface/`](tasks/done/foundation/verify-command-surface/)
+- [x] **Intent contract model** — [`intent-contract-model/`](tasks/done/foundation/intent-contract-model/)
+- [x] **Gate pipeline framework** — [`gate-pipeline-framework/`](tasks/done/foundation/gate-pipeline-framework/)
+- [x] **Verdict model + reporting** — [`verdict-model-reporting/`](tasks/done/foundation/verdict-model-reporting/)
+- [x] **Language engine seam** — [`language-engine-seam/`](tasks/done/foundation/language-engine-seam/)
 
 ---
 
