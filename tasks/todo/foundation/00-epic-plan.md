@@ -83,10 +83,11 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** given an ordered set of fake gates, the runner runs them cheapest-first,
   stops at the first blocking failure (later gates never run), and returns each gate's structured
   result with timing; an all-pass run returns all results; unit-tested with faked `IVerificationGate`s.
-- **Plan:** [`tasks/todo/foundation/gate-pipeline-framework/`](gate-pipeline-framework/00-overview.md)
+- **Plan:** [`tasks/done/foundation/gate-pipeline-framework/`](../../done/foundation/gate-pipeline-framework/00-overview.md)
   — planned 2026-11-17 (task.md + 00-overview + 3 phases in 2 waves + orchestrator). Gates ordered
   by a `GateStage` enum; `GateStatus { Passed, Warning, Failed, Skipped }`; per-gate duration via a
-  CLI `IClock`; `verify` runs the pipeline after a valid intent and logs a summary.
+  CLI `IClock`; `verify` runs the pipeline after a valid intent and logs a summary. **Built and
+  merged 2026-11-17 (PR #16).**
 
 ### 4. Verdict model + reporting — `verdict-model-reporting`
 - **Scope:** Aggregate the gate results (item 3) into one **verdict**: a machine-readable JSON
@@ -98,9 +99,11 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** a green result set serializes to a green JSON verdict + a clean report and
   exit 0; a set with any blocking failure serializes to a red verdict naming the gate/location/
   reason + a red report and a non-zero exit; both outputs are unit-tested against known result sets.
-- **Plan:** [`verdict-model-reporting/00-overview.md`](verdict-model-reporting/00-overview.md) —
+- **Plan:** [`tasks/done/foundation/verdict-model-reporting/`](../../done/foundation/verdict-model-reporting/00-overview.md) —
   planned 2026-11-17: 6 phases in 3 waves; JSON verdict to an optional `--verdict <path>` file (user
-  decision); exit codes 0 green / 1 blocked / 2 invalid input / 3 unexpected error.
+  decision); exit codes 0 green / 1 blocked / 2 invalid input / 3 unexpected error. Types landed in
+  `Commands/Verify/Verdicts/` (a mid-build plan fix; see ADR-G3). **Built and merged 2026-11-17
+  (PR #20)** — PR #17 had merged before its phase commits were pushed, so the code re-landed via #20.
 
 ### 5. Language engine seam — `language-engine-seam`
 - **Scope:** Per-language engine resolution behind the gates: a capability interface
@@ -114,9 +117,10 @@ pattern the README and `.claude/rules/csharp/naming-and-structure.md` describe.
 - **Acceptance shape:** resolving an engine for a C# unit of work returns the registered C# engine;
   an unsupported language returns a clear "no engine" error value (not an exception); the seam is
   fakeable and unit-tested; swapping/adding an engine needs no gate change.
-- **Plan:** [`language-engine-seam/00-overview.md`](language-engine-seam/00-overview.md) —
+- **Plan:** [`tasks/done/foundation/language-engine-seam/`](../../done/foundation/language-engine-seam/00-overview.md) —
   planned 2026-11-17: 2 phases (a chain); identity-only `CSharpLanguageEngine` (user decision); no
-  `VerifyCommand` change, so it stays clear of item 4.
+  `VerifyCommand` change, so it stays clear of item 4. **Built and merged 2026-11-17 (PR #19)** —
+  PR #18 had merged before its phase commits were pushed, so the code re-landed via #19.
 
 ## Group decisions (lightweight ADRs)
 
@@ -201,10 +205,10 @@ resolve with **no module registration**. Scan order is not a contract, so orderi
 |---|---|---|---|
 | 1 | 1 `verify-command-surface` | Built (PR #12) | — |
 | 2 | 2 `intent-contract-model` | Built (PR #13) | — |
-| 3 | 3 `gate-pipeline-framework` | Built (PR #16, open) | — |
-| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Planned | Both depend only on item 3; separate folders (`Verdicts/` vs `Engines/`). The `VerifyCommand.cs` hotspot is kept in item 4 only — item 5 adds no caller (its ADR-4) |
+| 3 | 3 `gate-pipeline-framework` | Built (PR #16) | — |
+| 4 | 4 `verdict-model-reporting`, 5 `language-engine-seam` | Built (PRs #20, #19) | Both depend only on item 3; separate folders (`Verdicts/` vs `Engines/`). The `VerifyCommand.cs` hotspot is kept in item 4 only — item 5 adds no caller (its ADR-4) |
 
-**Critical path:** 1 → 2 → 3 → 4 (or 5).
+**Critical path:** 1 → 2 → 3 → 4 (or 5). All built.
 
 ## Ordering rule
 
@@ -218,26 +222,14 @@ edited freely.
 
 ## Next item
 
-**Build item wave 4: `verdict-model-reporting` and `language-engine-seam` together** — both are
-**planned**. Items 1–3 are built (1 and 2 merged, plans in `tasks/done/foundation/`; item 3 is on
-PR #16, stacked on #15).
+**None — Foundation is done.** All five items are built and merged (2026-11-17); their plans are in
+`tasks/done/foundation/` and their `epics.md` lines are checked off. `verify` now parses a real
+submission, runs an (empty) fail-fast gate pipeline, and emits a real verdict and exit code.
 
-Each item has its own branch and orchestrator (`run verdict-model-reporting`,
-`run language-engine-seam`). To build them at the same time from one session, say **"run foundation
-item wave 4"**: the session's checkout stays on `verdict-model-reporting`, `language-engine-seam` is
-checked out as a sibling worktree (`../CodeWorker-language-engine-seam`), and the phases interleave
-under the 3-subagent cap:
-
-| Step | `verdict-model-reporting` | `language-engine-seam` | Subagents |
-|---|---|---|---|
-| 1 | Wave 1 — Phases 1, 2, 3 | — | 3 |
-| 2 | Wave 2 — Phases 4, 5 | Wave 1 — Phase 1 | 3 |
-| 3 | Wave 3 — Phase 6 | Wave 2 — Phase 2 | 2 |
-
-One watchdog covers every subagent. A failure in one item halts only that item.
-
-After both merge, item 5 is the last Foundation item: the group is done, and the next planning step
-is the next epic group in `epics.md`.
+The next planning step is the next epic group in `epics.md`: **Engine (in-process, C#)** — say
+**"epic planning for Engine"**. Its first item wave is **In-process compilation** alone (the
+In-process test runner depends on it). The Engine group registers its real C# engine behind this
+group's `IResolveLanguageEngine` seam (item 5) and feeds gate results into the verdict (item 4).
 
 ## Assumptions & open questions
 

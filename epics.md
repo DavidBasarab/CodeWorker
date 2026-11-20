@@ -38,9 +38,9 @@ Groups below are in build order._
 
 - [x] **Verify command surface** — Add a `verify` command to `CodeWorker.Cli` on the existing `IProcessArguments` dispatch: parse the intent file, production file(s), and test file(s) from args; invalid input returns a clear usage error (a value, not an exception). _(Follows the command pattern in `.claude/rules/csharp/naming-and-structure.md`.)_
 - [x] **Intent contract model** — The structured payload Claude submits (`why`, `class`, `responsibility`, `behaviors[]` of `{ behavior, test? }`) parsed and validated into a working-context object the pipeline consumes; a missing test file or unreadable intent is a returned error. _(README: The Intent Contract.)_
-- [ ] **Gate pipeline framework** — The `IVerificationGate` abstraction and the fail-fast runner: ordered gates, short-circuit on the first blocking failure, per-gate result (pass/fail, locations, reasons, timing). _(README: How It Works. The spine every gate plugs into.)_
-- [ ] **Verdict model + reporting** — Aggregate gate results into one verdict: a machine-readable JSON verdict for the hook and a human-readable report for the morning review. Exit code is 0 on green, non-zero on any block. _(README: Usage.)_
-- [ ] **Language engine seam** — Per-language engine resolution behind the gates, with the C# engine (see below) registered; gates never hard-code a language. _(README: C#-first, language-agnostic by design. Proven with a 2nd language later in Full.)_
+- [x] **Gate pipeline framework** — The `IVerificationGate` abstraction and the fail-fast runner: ordered gates, short-circuit on the first blocking failure, per-gate result (pass/fail, locations, reasons, timing). _(README: How It Works. The spine every gate plugs into.)_
+- [x] **Verdict model + reporting** — Aggregate gate results into one verdict: a machine-readable JSON verdict for the hook and a human-readable report for the morning review. Exit code is 0 on green, non-zero on any block. _(README: Usage.)_
+- [x] **Language engine seam** — Per-language engine resolution behind the gates, with the C# engine (see below) registered; gates never hard-code a language. _(README: C#-first, language-agnostic by design. Proven with a 2nd language later in Full.)_
 
 ### Engine (in-process, C#) — the sub-10s foundation
 
@@ -94,8 +94,16 @@ the epics the MVP didn't need._
 
 ## Done
 
-_Completed epics, grouped as they were built. Empty — the CLI is a fresh scaffold
-(`Program` → `CodeWorkerCliApplication` → `IProcessArguments`); no verification epic has shipped yet._
+_Completed epics, grouped as they were built. Each is also checked off in place above; its plans live
+under `tasks/done/`._
+
+### Foundation (the pipeline spine) — [`tasks/done/foundation/`](tasks/done/foundation/)
+
+- [x] **Verify command surface** — [`verify-command-surface/`](tasks/done/foundation/verify-command-surface/)
+- [x] **Intent contract model** — [`intent-contract-model/`](tasks/done/foundation/intent-contract-model/)
+- [x] **Gate pipeline framework** — [`gate-pipeline-framework/`](tasks/done/foundation/gate-pipeline-framework/)
+- [x] **Verdict model + reporting** — [`verdict-model-reporting/`](tasks/done/foundation/verdict-model-reporting/)
+- [x] **Language engine seam** — [`language-engine-seam/`](tasks/done/foundation/language-engine-seam/)
 
 ---
 
