@@ -19,6 +19,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="FatCat.Toolkit" Version="*" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="*" />
 		<PackageReference Include="Serilog" Version="*" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="*" />
 	</ItemGroup>
