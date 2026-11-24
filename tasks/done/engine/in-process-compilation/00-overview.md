@@ -1,7 +1,7 @@
 # in-process-compilation — Overview
 
 - **Work item:** `in-process-compilation` (Engine item 1; see
-  [`tasks/todo/engine/00-epic-plan.md`](../00-epic-plan.md))
+  [`tasks/todo/engine/00-epic-plan.md`](../../../todo/engine/00-epic-plan.md))
 - **Source of truth:** `CodeWorker.Cli/README.md` ("The engine runs in-process")
 - **Generated:** 2026-11-24-112457
 

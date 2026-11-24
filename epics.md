@@ -48,7 +48,7 @@ _No per-call `dotnet build` / `dotnet test` / Stryker — that overhead alone bl
 runs in-process on Roslyn against warm reference assemblies. This group is what makes the deterministic
 gates fast; the gates below are thin layers over it._
 
-- [ ] **In-process compilation** — Compile the changed class + its test in-memory via Roslyn, resolving reference assemblies once from the project's existing `bin` output (no MSBuild per call). Diagnostics are returned structured. _(The warm workspace every gate sits on.)_
+- [x] **In-process compilation** — Compile the changed class + its test in-memory via Roslyn, resolving reference assemblies once from the project's existing `bin` output (no MSBuild per call). Diagnostics are returned structured. _(The warm workspace every gate sits on.)_
 - [ ] **In-process test runner** — Load the compiled test assembly and run only the covering tests in-process (collectible `AssemblyLoadContext`), returning pass/fail per test in milliseconds. _(Depends on: In-process compilation.)_
 
 ### Deterministic gates (C#)
@@ -104,6 +104,10 @@ under `tasks/done/`._
 - [x] **Gate pipeline framework** — [`gate-pipeline-framework/`](tasks/done/foundation/gate-pipeline-framework/)
 - [x] **Verdict model + reporting** — [`verdict-model-reporting/`](tasks/done/foundation/verdict-model-reporting/)
 - [x] **Language engine seam** — [`language-engine-seam/`](tasks/done/foundation/language-engine-seam/)
+
+### Engine (in-process, C#) — [`tasks/done/engine/`](tasks/done/engine/)
+
+- [x] **In-process compilation** — [`in-process-compilation/`](tasks/done/engine/in-process-compilation/)
 
 ---
 

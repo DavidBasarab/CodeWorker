@@ -91,7 +91,7 @@ Nothing in `verify` calls it yet. The Compile gate (*Deterministic gates*) is th
 
 ## Feature Context
 
-- Epic plan: [`tasks/todo/engine/00-epic-plan.md`](../00-epic-plan.md), item 1 and ADR-G1..G5.
+- Epic plan: [`tasks/todo/engine/00-epic-plan.md`](../../../todo/engine/00-epic-plan.md), item 1 and ADR-G1..G5.
 - The seam it extends: [`language-engine-seam`](../../../done/foundation/language-engine-seam/00-overview.md)
   (ADR-1, identity-only interface).
 - Error-as-value pattern to mirror: `CodeWorker.Cli/Commands/Verify/Engines/LanguageEngineResult.cs`.
