@@ -1,4 +1,5 @@
 using FatCat.CodeWorker.Cli.Commands.Verify.Engines;
+using FatCat.CodeWorker.Cli.Commands.Verify.Engines.CSharp;
 
 namespace Testing.FatCat.CodeWorker.Cli.Commands.Verify.Engines;
 
@@ -169,7 +170,13 @@ public class ResolveLanguageEngineTests
 	[Fact]
 	public void ResolveTheRealCSharpEngineForACsFile()
 	{
-		var resolveWithRealEngine = new ResolveLanguageEngine([new CSharpLanguageEngine()]);
+		var realCSharpEngine = new CSharpLanguageEngine(
+			A.Fake<IFindProjectBuild>(),
+			A.Fake<IGatherCompilationSources>(),
+			A.Fake<IGatherCompilationReferences>(),
+			A.Fake<ICompileInMemory>()
+		);
+		var resolveWithRealEngine = new ResolveLanguageEngine([realCSharpEngine]);
 
 		var result = resolveWithRealEngine.Resolve(CSharpFilePath);
 
