@@ -67,7 +67,12 @@ tests in a collectible load context. Nothing in `verify` calls it yet.
   - An unbuilt project, or one with no owning `.csproj`, returns a distinct engine-error value.
   - Picking the reference set and the output folder is unit-tested with a faked file system.
   - A timed smoke run on a real unit from this repo is recorded against the sub-10s budget.
-- **Plan:** not yet planned  <!-- becomes: tasks/todo/engine/in-process-compilation/ -->
+- **Plan:** [`tasks/todo/engine/in-process-compilation/`](in-process-compilation/00-overview.md)
+  — planned 2026-11-24 (task.md + 00-overview + 5 phases in 3 waves + orchestrator). The
+  configuration whose build output was written most recently wins. References are the build output
+  (managed DLLs only) plus the runtime's framework assemblies, with the build-output copy winning.
+  Sources include each project's `GlobalUsings.cs` and its SDK-generated `*.GlobalUsings.g.cs`. The
+  overlay is named `<test AssemblyName>.Verify`. A cold timed smoke run is recorded in phase 5.
 
 ### 2. In-process test runner — `in-process-test-runner`
 - **Scope:** Load the compiled test assembly from item 1 into a **collectible
@@ -167,7 +172,7 @@ caller that the Compile gate would immediately replace; the timed smoke run cove
 
 | Wave | Items | State | Why independent |
 |---|---|---|---|
-| 1 | 1 `in-process-compilation` | Not planned | — |
+| 1 | 1 `in-process-compilation` | Planned | — |
 | 2 | 2 `in-process-test-runner` | Not planned | — (single item) |
 
 **Critical path:** 1 → 2. This is a chain by necessity. The test runner loads the assembly that
@@ -188,8 +193,11 @@ to reconcile. Item 2 is still a one-liner here and can be edited freely.
 
 ## Next item
 
-**`in-process-compilation`** — say **"plan in-process compilation"** (or "plan the next Engine
-wave") to expand it into `tasks/todo/engine/in-process-compilation/`.
+**`in-process-compilation` is planned.** Say **"run in-process-compilation"** to build it (5 phases,
+3 waves). Once it is built and merged, the next wave is **`in-process-test-runner`**: say "plan
+in-process test runner". Planning it first needs the open question below about how tests run.
+The **Compile gate** (*Deterministic gates*) depends only on item 1, so it can be planned alongside
+item 2.
 
 ## Assumptions & open questions
 
